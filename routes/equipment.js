@@ -132,6 +132,25 @@ router.get('/:id/price-history', async (req, res, next) => {
   }
 });
 
+// 4.5 GET /api/v1/equipment/:id/reviews
+router.get('/:id/reviews', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT r.rating, r.comment, c.name as customer_name, r.created_at
+      FROM reviews r
+      JOIN bookings b ON r.booking_id = b.id
+      JOIN booking_items bi ON b.id = bi.booking_id
+      JOIN customers c ON r.customer_id = c.id
+      WHERE bi.equipment_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT 10
+    `, [req.params.id]);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 5. POST /api/v1/equipment
 router.post('/', authenticate, requireAdmin, async (req, res, next) => {
   try {

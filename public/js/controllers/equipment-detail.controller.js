@@ -16,10 +16,18 @@ function($scope, $routeParams, Api, Cart, Toast) {
     Api.get('/equipment/' + $routeParams.id).then(function(res) {
       $scope.equipment = res.data.data;
       loadPriceHistory();
+      loadReviews();
     }).catch(function() {
       Toast.error('Equipment not found');
     }).finally(function() {
       $scope.loading = false;
+    });
+  }
+
+  function loadReviews() {
+    $scope.reviews = [];
+    Api.get('/equipment/' + $routeParams.id + '/reviews').then(function(res) {
+      $scope.reviews = res.data.data;
     });
   }
 

@@ -1,0 +1,69 @@
+<div class="main-content container mt-4">
+  <div class="flex-between border-bottom pb-2 mb-5 reveal">
+    <h1 class="font-display">Operative Intel</h1>
+    <div class="label text-muted">ID: {{currentUser.id}} | {{currentUser.email}}</div>
+  </div>
+
+  <h3 class="font-serif text-accent mb-4 reveal">Operational History (Bookings)</h3>
+
+  <div class="card reveal" ng-show="loading">
+    <div class="flex flex-center py-5">
+      <div class="spinner"></div>
+      <span class="label text-muted ml-2">Retrieving Logs...</span>
+    </div>
+  </div>
+
+  <div class="empty-state reveal" ng-show="!loading && bookings.length === 0">
+    <h3>No Operations Found</h3>
+    <p>You have not secured any logistics operations yet.</p>
+    <a href="#!/equipment" class="btn btn-outline mt-3">Access Catalog</a>
+  </div>
+
+  <div class="table-responsive reveal" ng-show="!loading && bookings.length > 0">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>T-Zero Bound (Date)</th>
+          <th>Directive Type</th>
+          <th>Venue Target</th>
+          <th class="text-right">Total Yield</th>
+          <th>Operational Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="bk in bookings">
+          <td class="font-mono">
+            <div class="text-primary">{{bk.event_date | date:'yyyy-MM-dd'}}</div>
+            <div class="text-muted" style="font-size:0.75rem;">Created: {{bk.created_at | date:'MMM dd, HH:mm'}}</div>
+          </td>
+          <td class="font-serif text-upper">{{bk.event_type}}</td>
+          <td>
+            <div class="font-mono">{{bk.venue_name}}</div>
+            <div class="text-muted" style="font-size:0.75rem;">{{bk.city}}, {{bk.state}}</div>
+          </td>
+          <td class="text-right font-mono text-gold">&#x20B9;{{bk.total_price}}</td>
+          <td>
+            <span class="badge" 
+                  ng-class="{
+                    'badge-success': bk.status === 'completed', 
+                    'badge-danger': bk.status === 'cancelled', 
+                    'badge-gold': bk.status === 'pending',
+                    'badge-crimson': bk.status === 'confirmed'
+                  }">
+              {{bk.status}}
+            </span>
+          </td>
+          <td>
+            <a href="#!/booking/{{bk.booking_id}}" class="btn btn-outline" style="height:32px; padding:0 8px;">DETAILS</a>
+            <button class="btn btn-outline" style="height:32px; padding:0 8px; border-color:var(--danger); color:var(--danger);" 
+                    ng-if="bk.status === 'pending'" 
+                    ng-click="cancelBooking(bk.booking_id)">
+              ABORT
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

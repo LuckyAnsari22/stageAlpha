@@ -30,4 +30,9 @@ function emitBacktestComplete(result) {
   io.emit('backtest:complete', result)
 }
 
-module.exports = { init, emitInventoryUpdate, emitPriceUpdate, emitBacktestComplete }
+function emitNewBooking(data) {
+  if (!io) return
+  io.emit('booking:new', data)
+}
+
+module.exports = { init, emitInventoryUpdate, emitPriceUpdate, emitBacktestComplete, emitNewBooking }

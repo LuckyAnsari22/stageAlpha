@@ -70,4 +70,21 @@
       <canvas id="priceHistoryChart"></canvas>
     </div>
   </div>
+
+  <div class="mt-5 mb-5 reveal" ng-show="reviews.length > 0">
+    <h3 class="font-display border-bottom pb-2 mb-4">Field Reports ({{reviews.length}})</h3>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+      <div class="card bg-surface" ng-repeat="review in reviews">
+        <div class="flex-between mb-2">
+          <div class="font-mono text-gold">
+            <span ng-repeat="star in [1,2,3,4,5] track by $index" 
+                  ng-style="{'opacity': star <= review.rating ? 1 : 0.2}">&#9733;</span>
+          </div>
+          <div class="label text-muted">{{review.created_at | date:'MMM dd, yyyy'}}</div>
+        </div>
+        <p class="font-serif text-secondary mb-3" style="font-size: 1.1rem; line-height: 1.4;">"{{review.comment}}"</p>
+        <div class="label text-accent">- {{review.customer_name}}</div>
+      </div>
+    </div>
+  </div>
 </div>

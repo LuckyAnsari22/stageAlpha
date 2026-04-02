@@ -67,10 +67,13 @@ router.post('/', authenticate, bookingValidation, handleValidation, async (req, 
     
     await client.query('COMMIT');
     
-    // 6. Emit Socket.IO event for real-time inventory update
+    // 6. Emit Socket.IO event for real-time inventory update & admin notifications
     const socketService = require('../services/socket');
     if (socketService.emitInventoryUpdate) {
       socketService.emitInventoryUpdate(items.map(i => i.equipment_id));
+    }
+    if (socketService.emitNewBooking) {
+      socketService.emitNewBooking({ id: booking.id, total: subtotal + taxAmount, type: event_type });
     }
     
     res.status(201).json({ success: true, data: { booking_id: booking.id, total_price: subtotal + taxAmount } });

@@ -27,7 +27,7 @@
         <span class="cart-badge">{{cartCount}}</span>
       </a>
       <a href="#!/login" class="btn btn-outline btn-sm" ng-hide="isLoggedIn">Sign In</a>
-      <span class="text-secondary" style="font-size:0.875rem" ng-show="isLoggedIn">{{currentUser.name}}</span>
+      <a href="#!/profile" class="text-secondary pointer" style="font-size:0.875rem" ng-show="isLoggedIn">[ {{currentUser.name}} ]</a>
       <button class="btn btn-ghost btn-sm" ng-show="isLoggedIn" ng-click="logout()">Sign Out</button>
     </div>
   </nav>
@@ -65,6 +65,7 @@
   <script src="/js/controllers/ToastController.js"></script>
   <script src="/js/controllers/nav.controller.js"></script>
   <script src="/js/controllers/home.controller.js"></script>
+  <script src="/js/controllers/profile.controller.js"></script>
   <script src="/js/controllers/auth.controller.js"></script>
   <script src="/js/controllers/equipment-list.controller.js"></script>
   <script src="/js/controllers/equipment-detail.controller.js"></script>

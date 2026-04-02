@@ -13,6 +13,7 @@ angular.module('stageAlpha', ['ngRoute'])
     .when('/admin/backtest', { templateUrl: '/views/backtest.html', controller: 'BacktestCtrl', title: 'Backtest', requireAdmin: true })
     .when('/login', { templateUrl: '/views/login.html', controller: 'AuthCtrl', title: 'Sign In', redirectIfAuth: true })
     .when('/register', { templateUrl: '/views/register.html', controller: 'AuthCtrl', title: 'Register', redirectIfAuth: true })
+    .when('/profile', { templateUrl: '/views/profile.html', controller: 'ProfileCtrl', title: 'My Profile', requireAuth: true })
     .otherwise({ redirectTo: '/' });
 }])
 
