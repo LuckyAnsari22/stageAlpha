@@ -1,0 +1,709 @@
+<!-- 
+  BOOKING.HTML - SESSION 09
+  
+  Multi-step booking form for customers.
+  
+  Visual flow: Progress stepper (1→2→3→4) shows which step is active.
+  Each step is a separate form with validation.
+  Prices updated in real-time when event date changes.
+  
+  Design: Use StageAlpha design system throughout.
+  - Dark cards for each step
+  - Form inputs with StageAlpha styles
+  - Responsive grid for stepper and content
+  
+  Key patterns:
+  - ng-show="currentStep === N" shows only current step
+  - Prev/Next buttons enable/disable based on validation
+  - Submit only on final step
+  - Confirmation shows booking ID and auto-redirects
+-->
+
+<div class="booking-page" ng-controller="BookingController">
+
+  <div class="container">
+
+    <!-- PROGRESS STEPPER
+         Visual indicator of which step user is on.
+         Design: Horizontal line with circles (numbered 1-4).
+         Current step is filled/highlighted, completed steps show checkmark. -->
+    <div class="stepper" style="
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-5);
+      padding: var(--space-3) 0;
+    ">
+
+      <!-- Step 1: Event Details -->
+      <div class="stepper-item">
+        <div class="stepper-circle" ng-class="{'active': currentStep === 1, 'completed': currentStep > 1}">
+          {{ currentStep > 1 ? '✓' : '1' }}
+        </div>
+        <p class="stepper-label">Event</p>
+      </div>
+
+      <!-- Line 1-2 -->
+      <div class="stepper-line" ng-class="{'active': currentStep >= 2}"></div>
+
+      <!-- Step 2: Cart Review -->
+      <div class="stepper-item">
+        <div class="stepper-circle" ng-class="{'active': currentStep === 2, 'completed': currentStep > 2}">
+          {{ currentStep > 2 ? '✓' : '2' }}
+        </div>
+        <p class="stepper-label">Cart</p>
+      </div>
+
+      <!-- Line 2-3 -->
+      <div class="stepper-line" ng-class="{'active': currentStep >= 3}"></div>
+
+      <!-- Step 3: Customer Details -->
+      <div class="stepper-item">
+        <div class="stepper-circle" ng-class="{'active': currentStep === 3, 'completed': currentStep > 3}">
+          {{ currentStep > 3 ? '✓' : '3' }}
+        </div>
+        <p class="stepper-label">Details</p>
+      </div>
+
+      <!-- Line 3-4 -->
+      <div class="stepper-line" ng-class="{'active': currentStep >= 4}"></div>
+
+      <!-- Step 4: Confirmation -->
+      <div class="stepper-item">
+        <div class="stepper-circle" ng-class="{'active': currentStep === 4, 'completed': currentStep >= 4}">
+          {{ currentStep >= 4 ? '✓' : '4' }}
+        </div>
+        <p class="stepper-label">Done</p>
+      </div>
+
+    </div>
+
+    <!-- =====================================================================
+         STEP 1: EVENT DETAILS
+         
+         Select event date, event type, and venue.
+         Form validation: all three fields required before proceeding to Step 2.
+       ===================================================================== -->
+    <div class="booking-step step-1" ng-show="currentStep === 1">
+      <div class="card" style="max-width: 600px; margin: 0 auto; padding: var(--space-4);">
+
+        <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+          Event Details
+        </h2>
+        <p class="body-sm text-muted" style="margin-bottom: var(--space-4);">
+          Tell us about your event so we can recommend the right equipment.
+        </p>
+
+        <!-- Event Date Input
+             type="date" renders native date picker (mobile-friendly)
+             min attribute ensures booking date ≥ tomorrow -->
+        <div class="form-group">
+          <label class="form-label">Event Date <span class="text-danger">*</span></label>
+          <input 
+            type="date"
+            ng-model="eventDetails.event_date"
+            ng-attr-min="{{minEventDate}}"
+            class="form-input"
+            placeholder="Select event date"
+          />
+          <p class="body-xs text-muted" style="margin-top: 6px;">
+            Bookings must be at least 1 day in advance.
+          </p>
+        </div>
+
+        <!-- Event Type Dropdown -->
+        <div class="form-group">
+          <label class="form-label">Event Type <span class="text-danger">*</span></label>
+          <select 
+            ng-model="eventDetails.event_type"
+            class="form-input"
+          >
+            <option value="">-- Select event type --</option>
+            <option ng-repeat="type in eventTypes" value="{{type.value}}">
+              {{type.label}}
+            </option>
+          </select>
+        </div>
+
+        <!-- Venue Dropdown -->
+        <div class="form-group">
+          <label class="form-label">Venue <span class="text-danger">*</span></label>
+          <select 
+            ng-model="eventDetails.venue_id"
+            class="form-input"
+          >
+            <option value="">-- Select venue --</option>
+            <option ng-repeat="venue in venues" value="{{venue.id}}">
+              {{venue.name}} — {{venue.city}}
+            </option>
+          </select>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="button-group" style="
+          display: flex;
+          gap: var(--space-2);
+          margin-top: var(--space-4);
+          justify-content: space-between;
+        ">
+          <!-- No previous button on Step 1 -->
+          <button 
+            class="btn btn-primary"
+            ng-click="nextStep()"
+            style="margin-left: auto;"
+          >
+            Next: Review Cart →
+          </button>
+        </div>
+
+      </div>
+    </div>
+    <!-- End Step 1 -->
+
+    <!-- =====================================================================
+         STEP 2: CART REVIEW
+         
+         Show all items in cart with:
+         - Base price (strikethrough)
+         - Algorithm price (updated for selected event date)
+         - Confidence level (HIGH/MEDIUM/LOW)
+         - Ability to adjust quantities or remove items
+         
+         Show price summary: subtotal + 18% GST + total
+       ===================================================================== -->
+    <div class="booking-step step-2" ng-show="currentStep === 2">
+      <div class="card" style="padding: var(--space-4);">
+
+        <h2 class="heading-md" style="margin-bottom: var(--space-1);">
+          Review Your Booking Cart
+        </h2>
+        <p class="body-sm text-muted" style="margin-bottom: var(--space-3);">
+          Prices are calculated for {{eventDetails.event_date || 'your event date'}}.
+        </p>
+
+        <!-- Receipt-Style Cart Display
+             Dark background, monospace font, itemized rows like a receipt.
+             This shows the invoice/quote for the customer. -->
+        <div class="receipt-container card" style="
+          background: var(--sa-bg-surface);
+          border: 1px solid var(--sa-border);
+          border-radius: var(--radius-lg);
+          padding: var(--space-4);
+          margin-bottom: var(--space-4);
+          font-family: 'Courier New', monospace;
+          font-size: 0.875rem;
+          line-height: 1.6;
+          color: var(--sa-text-primary);
+        ">
+
+          <!-- Receipt Header -->
+          <div style="
+            border-bottom: 1px solid var(--sa-border);
+            padding-bottom: var(--space-2);
+            margin-bottom: var(--space-3);
+            text-align: center;
+          ">
+            <p style="font-weight: 600; margin: 0 0 4px 0; font-size: 1rem;">
+              EQUIPMENT BOOKING
+            </p>
+            <p style="color: var(--sa-text-muted); margin: 0; font-size: 0.75rem;">
+              Event: {{eventDetails.event_date}} | Type: {{eventDetails.event_type}}
+            </p>
+          </div>
+
+          <!-- Line items (receipt style) -->
+          <div class="receipt-items" style="margin-bottom: var(--space-3);">
+            <div ng-repeat="item in cartItems track by item.id" style="
+              display: grid;
+              grid-template-columns: 1fr auto auto;
+              gap: var(--space-2);
+              margin-bottom: var(--space-2);
+              padding-bottom: var(--space-2);
+              border-bottom: 1px dashed var(--sa-border);
+            ">
+
+              <!-- Item description (left: name × qty) -->
+              <div>
+                <div style="font-weight: 500;">{{item.name}}</div>
+                <div style="color: var(--sa-text-muted); font-size: 0.8rem;">
+                  {{item.category_name}} | Qty: 
+                  <input 
+                    type="number"
+                    ng-model="item.qty"
+                    min="1"
+                    max="99"
+                    ng-change="updateQuantity(item.id, item.qty)"
+                    class="form-input"
+                    style="width: 50px; display: inline-block; padding: 2px 4px; font-size: 0.75rem;"
+                  />
+                </div>
+              </div>
+
+              <!-- Price info (middle: base vs algo) -->
+              <div style="text-align: right; white-space: nowrap;">
+                <div style="text-decoration: line-through; color: var(--sa-text-muted); font-size: 0.8rem;">
+                  ₹{{item.base_price | number:0}}
+                </div>
+                <div style="color: var(--sa-accent); font-weight: 500;">
+                  ₹{{item.algorithm_price | number:0}}
+                </div>
+                <div style="color: var(--sa-text-muted); font-size: 0.75rem;">
+                  {{priceUpliftText(item)}}
+                </div>
+              </div>
+
+              <!-- Line total (right) -->
+              <div style="text-align: right; white-space: nowrap;">
+                <div style="font-weight: 600; color: var(--sa-accent);">
+                  ₹{{(item.algorithm_price * item.qty) | number:0}}
+                </div>
+                <button 
+                  class="btn btn-outline btn-xs"
+                  ng-click="removeFromCart(item.id)"
+                  style="margin-top: 4px; font-size: 0.65rem; padding: 2px 6px;"
+                >
+                  Remove
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Confidence indicators (separate section) -->
+          <div style="
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-2);
+            margin-bottom: var(--space-3);
+            padding: var(--space-2);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-md);
+          ">
+            <div ng-repeat="item in cartItems track by item.id" style="font-size: 0.75rem;">
+              <span style="color: var(--sa-text-muted);">{{item.name}}</span>
+              <span class="badge" ng-class="confidenceClass(item.confidence_level)" style="display: inline-block; margin-left: 8px;">
+                {{item.confidence_level}}
+              </span>
+            </div>
+          </div>
+
+          <!-- Price Summary (receipt totals) -->
+          <div style="border-top: 2px solid var(--sa-accent); padding-top: var(--space-2);">
+            
+            <!-- Subtotal -->
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+            ">
+              <span>Subtotal:</span>
+              <span>₹{{priceSummary.subtotal | number:0}}</span>
+            </div>
+
+            <!-- GST -->
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 12px;
+              color: var(--sa-text-muted);
+            ">
+              <span>GST (18%):</span>
+              <span>₹{{priceSummary.gst | number:0}}</span>
+            </div>
+
+            <!-- Total (prominent) -->
+            <div style="
+              display: flex;
+              justify-content: space-between;
+              font-weight: 700;
+              font-size: 1rem;
+              color: var(--sa-accent);
+            ">
+              <span>TOTAL:</span>
+              <span>₹{{priceSummary.total | number:0}}</span>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Out-of-stock warning (shown if some items failed to book) -->
+        <div ng-show="outOfStockItems.length > 0" class="card alert-error" style="
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid var(--sa-danger);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          margin-bottom: var(--space-3);
+        ">
+          <p class="body-sm text-danger">
+            ⚠ Some items went out of stock. Please remove or reduce quantities for:
+            <strong ng-repeat="id in outOfStockItems">
+              {{(cartItems | filter:{id: id})[0].name}}<span ng-show="!$last">, </span>
+            </strong>
+          </p>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="button-group" style="
+          display: flex;
+          gap: var(--space-2);
+          margin-top: var(--space-4);
+          justify-content: space-between;
+        ">
+          <button class="btn btn-outline" ng-click="previousStep()">
+            ← Back
+          </button>
+          <button class="btn btn-primary" ng-click="nextStep()">
+            Next: Your Details →
+          </button>
+        </div>
+
+    <!-- =====================================================================
+         STEP 3: CUSTOMER DETAILS
+         
+         Collect customer name (pre-filled if logged in) and special requests.
+       ===================================================================== -->
+    <div class="booking-step step-3" ng-show="currentStep === 3">
+      <div class="card" style="max-width: 600px; margin: 0 auto; padding: var(--space-4);">
+
+        <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+          Your Details
+        </h2>
+        <p class="body-sm text-muted" style="margin-bottom: var(--space-4);">
+          Confirm your information and add any special requests.
+        </p>
+
+        <!-- Customer Name -->
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="text-danger">*</span></label>
+          <input 
+            type="text"
+            ng-model="customerDetails.name"
+            class="form-input"
+            placeholder="Enter your full name"
+          />
+        </div>
+
+        <!-- Special Requests -->
+        <div class="form-group">
+          <label class="form-label">Special Requests</label>
+          <textarea 
+            ng-model="customerDetails.special_requests"
+            class="form-input"
+            style="min-height: 100px; font-family: var(--font-body);"
+            placeholder="Any special setup instructions, delivery notes, etc."
+          ></textarea>
+          <p class="body-xs text-muted" style="margin-top: 6px;">
+            Let us know if you need setup assistance, specific placement, or other arrangements.
+          </p>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="button-group" style="
+          display: flex;
+          gap: var(--space-2);
+          margin-top: var(--space-4);
+          justify-content: space-between;
+        ">
+          <button class="btn btn-outline" ng-click="previousStep()">
+            ← Back
+          </button>
+          <button 
+            class="btn btn-primary"
+            ng-click="submitBooking()"
+          >
+            Complete Booking ✓
+          </button>
+        </div>
+
+      </div>
+    </div>
+    <!-- End Step 3 -->
+
+    <!-- =====================================================================
+         STEP 4: CONFIRMATION
+         
+         Show success message with booking ID.
+         Offer options to view booking status or continue shopping.
+       ===================================================================== -->
+    <div class="booking-step step-4" ng-show="currentStep === 4">
+      <div class="card success-card" style="
+        max-width: 600px;
+        margin: 0 auto;
+        padding: var(--space-5);
+        text-align: center;
+        background: rgba(34, 197, 94, 0.05);
+        border: 2px solid var(--sa-success);
+        border-radius: var(--radius-lg);
+      ">
+
+        <!-- Success Icon / Checkmark -->
+        <div style="
+          font-size: 3rem;
+          margin-bottom: var(--space-3);
+          color: var(--sa-success);
+        ">
+          ✓
+        </div>
+
+        <h2 class="heading-md text-success" style="color: var(--sa-success); margin-bottom: var(--space-1);">
+          Booking Confirmed!
+        </h2>
+
+        <p class="body-md text-muted" style="margin-bottom: var(--space-3);">
+          Your booking has been created successfully.
+        </p>
+
+        <!-- Booking ID (prominent) -->
+        <div style="
+          background: var(--sa-bg-surface);
+          border: 1px dashed var(--sa-border);
+          border-radius: var(--radius-md);
+          padding: var(--space-3);
+          margin-bottom: var(--space-4);
+        ">
+          <p class="label" style="margin-bottom: 8px;">Booking Reference</p>
+          <p class="mono-lg" style="font-size: 1.5rem; letter-spacing: 0.08em;">
+            {{bookingId}}
+          </p>
+        </div>
+
+        <!-- Confirmation message -->
+        <p class="body-sm text-muted" style="margin-bottom: var(--space-4);">
+          A confirmation email has been sent. You can track your booking and make changes anytime.
+        </p>
+
+        <!-- Action Buttons -->
+        <div class="button-group" style="
+          display: flex;
+          gap: var(--space-2);
+          flex-direction: column;
+        ">
+          <button 
+            class="btn btn-primary"
+            ng-click="viewBooking()"
+          >
+            View Booking Status
+          </button>
+          <button 
+            class="btn btn-outline"
+            ng-click="continueShopping()"
+          >
+            Continue Shopping
+          </button>
+        </div>
+
+      <!-- Auto-redirect message -->
+      <div style="text-align: center; margin-top: var(--space-3);">
+        <p class="body-sm text-muted">
+          Redirecting to booking status in a moment...
+        </p>
+      </div>
+
+    </div>
+    <!-- End Step 4 -->
+
+  </div>
+  <!-- End container -->
+
+</div>
+<!-- End booking-page -->
+
+<!-- =====================================================================
+     STYLES: Component Classes & Responsive
+   ===================================================================== -->
+<style>
+  /* ===== BOOKING PAGE ===== */
+  .booking-page {
+    padding: var(--space-4) 0 var(--space-5);
+    min-height: 100vh;
+  }
+
+  /* ===== STEPPER ===== */
+  .stepper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .stepper-item {
+    flex: 0 0 auto;
+    text-align: center;
+    transition: all var(--duration) var(--ease);
+  }
+
+  .stepper-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-1);
+    font-weight: 600;
+    font-size: 1rem;
+    font-family: var(--font-display);
+    background: var(--sa-border);
+    color: var(--sa-text-muted);
+    transition: all var(--duration) var(--ease);
+  }
+
+  .stepper-circle.active {
+    background: var(--sa-accent);
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(var(--sa-accent-rgb), 0.1);
+  }
+
+  .stepper-circle.completed {
+    background: var(--sa-success);
+    color: white;
+  }
+
+  .stepper-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--sa-text-muted);
+    margin: 0;
+    transition: color var(--duration) var(--ease);
+  }
+
+  .stepper-item .stepper-circle.active ~ .stepper-label,
+  .stepper-item .stepper-circle.completed ~ .stepper-label {
+    color: var(--sa-text-primary);
+  }
+
+  .stepper-line {
+    flex: 1;
+    height: 2px;
+    background: var(--sa-border);
+    transition: background var(--duration) var(--ease);
+    margin-bottom: 32px;
+  }
+
+  .stepper-line.active {
+    background: var(--sa-accent);
+  }
+
+  /* ===== BOOKING STEPS ===== */
+  .booking-step {
+    animation: fadeInStep 0.3s var(--ease) forwards;
+  }
+
+  @keyframes fadeInStep {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ===== RECEIPT STYLING ===== */
+  .receipt-container {
+    font-family: 'Courier New', 'Courier', monospace !important;
+    letter-spacing: 0.5px;
+  }
+
+  .receipt-items {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ===== BUTTON GROUP ===== */
+  .button-group {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .button-group button {
+    min-width: 140px;
+  }
+
+  /* ===== SUCCESS CARD ===== */
+  .success-card {
+    animation: slideInUp 0.4s var(--ease) forwards;
+  }
+
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ===== MOBILE RESPONSIVE (max-width: 768px) ===== */
+  @media (max-width: 768px) {
+    .stepper {
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .stepper-item {
+      flex-basis: calc(25% - 8px);
+    }
+
+    .stepper-line {
+      flex-basis: 100%;
+      height: 1px;
+      margin: 12px 0;
+    }
+
+    .stepper-circle {
+      width: 40px;
+      height: 40px;
+      font-size: 0.875rem;
+    }
+
+    .stepper-label {
+      font-size: 0.65rem;
+    }
+
+    .booking-step {
+      padding: var(--space-2);
+    }
+
+    .booking-step .card {
+      max-width: 100% !important;
+    }
+
+    .receipt-container {
+      font-size: 0.75rem;
+      padding: var(--space-2) !important;
+      line-height: 1.4;
+    }
+
+    .button-group {
+      flex-direction: column;
+    }
+
+    .button-group button {
+      width: 100%;
+    }
+
+    .price-summary {
+      margin-bottom: var(--space-2) !important;
+    }
+  }
+
+  /* ===== TABLET RESPONSIVE (769px - 1024px) ===== */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .receipt-container {
+      font-size: 0.8rem;
+    }
+  }
+
+  /* ===== DARK MODE SUPPORT ===== */
+  @media (prefers-color-scheme: dark) {
+    .receipt-container {
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
+</style>

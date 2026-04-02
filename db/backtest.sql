@@ -1,0 +1,16 @@
+-- ============================================================================
+-- STAGEALPHA BACKTEST STORED PROCEDURE
+-- ============================================================================
+-- Separated into its own file for clarity
+-- 
+-- Procedure: run_backtest(start_date, end_date)
+-- Compares actual historical revenue vs what algorithm would have earned
+-- Proves the quantitative approach adds value
+-- 
+-- Result logged to: backtest_results table
+-- 
+-- This file will be populated in SESSION 03
+-- ============================================================================
+
+-- This file can be executed with:
+-- psql -d stagealpha -f db/backtest.sql

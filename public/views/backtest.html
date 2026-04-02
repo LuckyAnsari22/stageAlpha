@@ -1,0 +1,63 @@
+<div class="main-content container mt-4">
+  <div class="flex-between mb-4 border-bottom pb-2 reveal">
+    <h1 class="font-display text-warning">Algorithmic Backtesting</h1>
+    <a href="#!/admin" class="label text-muted">&larr; Return to Command Center</a>
+  </div>
+
+  <p class="font-mono text-secondary mb-4 reveal">
+    Evaluate the performance of the Lerner Index dynamic pricing engine against a static-price baseline over a historical temporal bound.
+  </p>
+
+  <div class="card reveal mb-5" style="border-left-color: var(--warning);">
+    <h4 class="font-serif mb-3">Initialize Simulation Bounds</h4>
+    <form name="backtestForm" ng-submit="runBacktest()" class="flex items-start gap-4">
+      <div class="form-group flex-1">
+        <label class="form-label">T-Zero (Start Date)</label>
+        <input type="date" class="form-control font-mono" ng-model="params.start_date" required>
+      </div>
+      <div class="form-group flex-1">
+        <label class="form-label">T-End (End Date)</label>
+        <input type="date" class="form-control font-mono" ng-model="params.end_date" required>
+      </div>
+      <div style="padding-top: 24px;">
+        <button type="submit" class="btn btn-primary" ng-disabled="backtestForm.$invalid || loading" style="background: var(--warning); border-color: var(--warning); color: var(--bg-base);">
+          {{loading ? '[ COMPUTING... ]' : 'EXECUTE RUN'}}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="alert alert-danger mb-4 reveal" ng-show="error">
+    [ SIMULATION FAILED ] {{error}}
+  </div>
+
+  <div ng-show="results && !loading" class="reveal">
+    <h3 class="font-display mb-3">Simulation Telemetry</h3>
+    
+    <div class="grid grid-cols-3 mb-5">
+      <div class="card p-4">
+        <div class="label mb-1">Total Transactions Processed</div>
+        <div class="font-mono text-primary" style="font-size: 2rem;">{{results.total_bookings}}</div>
+      </div>
+      <div class="card p-4">
+        <div class="label mb-1">Baseline Yield (Static)</div>
+        <div class="font-mono text-muted" style="font-size: 2rem;">&#x20B9;{{results.static_revenue | number:2}}</div>
+      </div>
+      <div class="card p-4">
+        <div class="label mb-1">Dynamic Yield (Lerner Engine)</div>
+        <div class="font-mono text-gold" style="font-size: 2rem;">&#x20B9;{{results.dynamic_revenue | number:2}}</div>
+      </div>
+    </div>
+
+    <!-- Impact Block -->
+    <div class="card p-5 text-center mb-5" ng-class="{'border-success': results.improvement_pct > 0, 'border-danger': results.improvement_pct <= 0}">
+      <div class="label mb-2">Algorithmic Impact Factor</div>
+      <div class="font-mono" style="font-size: 3.5rem;" ng-class="{'text-success': results.improvement_pct > 0, 'text-danger': results.improvement_pct <= 0}">
+        {{results.improvement_pct > 0 ? '+' : ''}}{{results.improvement_pct}}%
+      </div>
+      <p class="text-muted mt-2 font-mono">
+         Result: The dynamic engine {{results.improvement_pct > 0 ? 'outperformed' : 'underperformed'}} the static baseline model.
+      </p>
+    </div>
+  </div>
+</div>

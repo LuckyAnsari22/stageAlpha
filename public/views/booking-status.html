@@ -1,0 +1,106 @@
+<div class="page">
+  <div class="container container-md">
+    
+    <div class="skeleton loading-overlay" ng-if="loading" style="height:300px; border-radius:var(--r-lg)"></div>
+
+    <div ng-if="!loading && booking">
+      <!-- HEADER -->
+      <div class="text-center mb-5">
+        <p class="text-muted" style="font-size:0.875rem">TICKET REFERENCE</p>
+        <h1 class="page-title mb-2" style="font-family:'DM Mono', monospace; letter-spacing:0.05em">#BK-{{booking.booking_id}}</h1>
+        <span class="badge" ng-class="statusClass(booking.status)" style="font-size:0.875rem; padding:6px 16px">
+          <span style="text-transform:uppercase; letter-spacing:0.1em">{{booking.status}}</span>
+        </span>
+      </div>
+      
+      <div class="grid-sidebar">
+        <!-- LEFT: Timeline -->
+        <div class="card pt-4 pb-4">
+          <h3 class="font-display mb-4" style="padding-left:14px">Booking Flow</h3>
+          <div class="timeline">
+            <div class="timeline-item" ng-class="{'timeline-item--done': booking.status !== 'pending' && booking.status !== 'cancelled', 'timeline-item--active': booking.status === 'pending'}">
+              <p class="timeline-label">Booking Received</p>
+              <span class="timeline-time">{{booking.created_at | date:'medium'}}</span>
+            </div>
+            
+            <div class="timeline-item" ng-class="{'timeline-item--done': booking.status === 'completed', 'timeline-item--active': booking.status === 'confirmed'}">
+              <p class="timeline-label">Processing Request</p>
+              <span class="timeline-time" ng-if="booking.status === 'pending'">Awaiting admin confirmation...</span>
+              <span class="timeline-time" ng-if="booking.status !== 'pending'">Verified & confirmed</span>
+            </div>
+
+            <div class="timeline-item" ng-if="booking.status !== 'cancelled'" ng-class="{'timeline-item--done': booking.status === 'completed', 'timeline-item--active': booking.status === 'completed'}">
+              <p class="timeline-label" ng-class="booking.status === 'completed' ? 'text-success' : 'text-muted'">Delivery Completed</p>
+              <span class="timeline-time" ng-if="booking.status !== 'completed'">Pending fulfillment block</span>
+            </div>
+
+            <div class="timeline-item timeline-item--active" ng-if="booking.status === 'cancelled'">
+              <p class="timeline-label text-danger">Event Cancelled</p>
+              <span class="timeline-time">Stock successfully unreserved</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Details -->
+        <div>
+          <div class="card mb-3">
+            <div class="flex-between mb-3 border-bottom pb-2">
+              <h3 class="font-display">Event Details</h3>
+            </div>
+            <div class="flex flex-col gap-2" style="font-size:0.875rem">
+              <div class="flex-between">
+                <span class="text-muted">Target Date</span>
+                <span class="font-weight-600">{{booking.event_date | date:'longDate'}}</span>
+              </div>
+              <div class="flex-between">
+                <span class="text-muted">Type</span>
+                <span style="text-transform:capitalize">{{booking.event_type}}</span>
+              </div>
+              <div class="flex-between">
+                <span class="text-muted">Venue</span>
+                <span>{{booking.venue_name}} ({{booking.city}})</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="font-display mb-3">Equipment Reserved</h3>
+            <div class="table-wrap">
+              <table class="sa-table" style="width:100%">
+                <tbody>
+                   <tr ng-repeat="item in booking.items">
+                     <td style="padding:10px; font-weight:500;">
+                       <span style="font-family:'DM Mono'">{{item.qty}}x</span> {{item.equipment_name}}
+                     </td>
+                     <td style="text-align:right; font-family:'DM Mono'; font-size:0.875rem" class="text-success">
+                       ₹{{item.final_price * item.qty | number:0}}
+                     </td>
+                   </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="divider my-3"></div>
+
+            <div class="flex-between mb-1" style="font-size:0.875rem">
+              <span class="text-muted">Subtotal</span>
+              <span style="font-family:'DM Mono'">₹{{booking.subtotal | number:0}}</span>
+            </div>
+            <div class="flex-between mb-2" style="font-size:0.875rem">
+              <span class="text-muted">Tax (18%)</span>
+              <span style="font-family:'DM Mono'">₹{{booking.tax_amount | number:0}}</span>
+            </div>
+            <div class="flex-between">
+              <strong class="font-display" style="font-size:1.1rem">Total Value</strong>
+              <strong class="text-success" style="font-family:'DM Mono'; font-size:1.2rem">₹{{booking.total_price | number:0}}</strong>
+            </div>
+            
+            <div class="mt-4" ng-if="booking.status === 'completed'">
+              <p class="text-center text-muted" style="font-size:0.8125rem">Payment finalized. Did you enjoy the service? We appreciate feedback!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

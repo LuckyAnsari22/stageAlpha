@@ -1,0 +1,601 @@
+<!-- 
+  EQUIPMENT-LIST.HTML - SESSION 07
+
+  Equipment catalog page: browse, filter, and add to cart.
+  
+  Design: Premium DJ equipment marketplace aesthetic.
+  - Grid layout with responsive cards
+  - Real-time stock status updates
+  - Algorithm pricing transparently displayed
+  - Smooth interactions (no jarring state changes)
+  
+  Key patterns:
+  - ng-show/ng-if for conditional rendering
+  - ng-repeat for dynamic lists
+  - {{}} data binding for reactive updates
+  - ng-class for dynamic styling
+  - ng-model for two-way binding (filters)
+-->
+
+<div class="equipment-page">
+
+  <!-- =====================================================================
+       PAGE HEADER: Title + Count + Sort Dropdown
+       ===================================================================== -->
+  <div class="container">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin: var(--space-4) 0; gap: var(--space-3);">
+      
+      <!-- Left: Title + Live Count -->
+      <div>
+        <h1 class="display-lg">Equipment Catalog</h1>
+        <!-- {{filteredEquipment.length}} updates as user filters
+             This is two-way binding: when $scope.filteredEquipment changes,
+             the HTML automatically re-renders with the new count -->
+        <p class="body-md text-muted">{{filteredEquipment.length}} items available</p>
+      </div>
+
+      <!-- Right: Sort Dropdown -->
+      <div class="flex gap-2">
+        <!-- ng-model="sort" binds this dropdown to $scope.sort
+             When user selects an option, $scope.sort changes
+             $watch('sort', ...) detects the change and calls applyClientFilters()
+             Instant sorting with NO API call (client-side computation) -->
+        <select ng-model="sort" class="form-input" style="width: auto; min-width: 180px;">
+          <option value="name">Name A-Z</option>
+          <option value="price_asc">Price: Low to High</option>
+          <option value="price_desc">Price: High to Low</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       MAIN LAYOUT: Filter Sidebar + Equipment Grid
+       
+       Display: two-column flex layout
+       - Left 300px: Filter panel (sticky on desktop, collapses on mobile)
+       - Right: Equipment grid (responsive)
+       
+       On mobile (<768px), media query will stack them vertically.
+       ===================================================================== -->
+  <div class="container">
+    <div class="equipment-layout" style="display: flex; gap: var(--space-4); margin-bottom: var(--space-5);">
+
+      <!-- ===================================================================
+           FILTER SIDEBAR
+           
+           Contains: search input, category dropdown, availability checkbox
+           
+           Design: .card style (dark background, subtle border)
+           - Sticky on desktop: user can scroll equipment but filters stay visible
+           - Collapsible on mobile (via CSS media query / JavaScript)
+           
+           Bindings:
+           - ng-model="filters.search" → user types → $scope.filters.search updates
+           - $watch detects change → applyClientFilters() → filteredEquipment updates
+           - {{filteredEquipment}} in grid updates automatically
+           
+           === -->
+      <aside class="filter-panel card" style="flex: 0 0 300px; max-height: 600px; overflow-y: auto;">
+        
+        <!-- Filter header -->
+        <p class="label" style="margin-bottom: var(--space-3);">
+          Filter
+        </p>
+
+        <!-- FILTER: Text Search
+             
+             ng-model="filters.search" binds the input value to $scope.filters.search
+             When user types:
+             1. Input fires 'change' event
+             2. AngularJS updates $scope.filters.search
+             3. $watch('filters', ..., true) detects change (deep equality)
+             4. applyClientFilters() runs
+             5. Client-side filter searches name + description (case-insensitive)
+             6. $scope.filteredEquipment updates
+             7. ng-repeat in grid re-renders with filtered items
+             8. All happens in ~5-10ms (INSTANT feedback)
+             
+             Placeholder: "Speaker, mixer, light..." suggests search scope to user.
+        -->
+        <div class="form-group">
+          <label class="form-label">Search</label>
+          <input 
+            type="text" 
+            ng-model="filters.search" 
+            class="form-input"
+            placeholder="Speaker, mixer, light..."
+            style="width: 100%;"
+          />
+        </div>
+
+        <!-- FILTER: Category Dropdown
+             
+             ng-model="filters.category" binds dropdown to $scope.filters.category
+             
+             ng-repeat="cat in categories" loops through $scope.categories array
+             - Each iteration creates an <option> with cat.name as display text
+             - If categories array is empty (loading), no options appear (no error)
+             
+             Why default option "All Categories"?
+             - Empty string "" = unfiltered state
+             - User expects "clear" option to show everything again
+             - Also prevents confusion: "why did equipment disappear?"
+             
+             Why ng-model="filters.category" string?
+             - HTML <select> values are always strings
+             - If we need to pass as integer to API, do parseInt() before calling API
+             - For now, just pass string (backend handles conversion)
+        -->
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select ng-model="filters.category" class="form-input" style="width: 100%;">
+            <!-- Default: show all -->
+            <option value="">All Categories</option>
+            
+            <!-- Dynamic options from $scope.categories array -->
+            <!-- value="{{cat.id}}" converts cat.id to string (HTML requirement) -->
+            <option ng-repeat="cat in categories" value="{{cat.id}}">
+              {{cat.name}}
+            </option>
+          </select>
+        </div>
+
+        <!-- FILTER: Availability Checkbox
+             
+             ng-model="filters.availableOnly" binds checkbox to boolean
+             - Checked (true): only show items with stock_qty > 0
+             - Unchecked (false): show all items
+             
+             Why separate checkbox from the others?
+             - It's a boolean, not a dropdown (different DOM element)
+             - But binding pattern is the same: ng-model → $scope updates → filter updates
+             
+             "Available only" text is a label describing what filter does.
+             Users scan filters looking for what constraints are applied.
+        -->
+        <label class="toggle-row" style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); cursor: pointer;">
+          <input 
+            type="checkbox" 
+            ng-model="filters.availableOnly"
+            style="accent-color: var(--sa-accent); cursor: pointer;"
+          />
+          <span class="body-sm">Available only</span>
+        </label>
+
+        <!-- Clear filters button
+             
+             ng-click="filters={category:'',search:'',availableOnly:false}"
+             
+             This REPLACES the entire filters object with default values.
+             $watch detects the change → applyClientFilters() → shows all equipment
+             
+             Why full object replacement vs just zeroing?
+             - Ensures all fields are reset (prevents stale state if we add new filters later)
+             - Clear and obvious what "reset" means
+             
+             Why btn-outline btn-sm?
+             - Secondary action (not main interaction)
+             - Small size keeps sidebar compact
+             - w-full makes it fill container width (easier to tap on mobile)
+        -->
+        <button 
+          class="btn btn-outline btn-sm w-full" 
+          ng-click="filters={category:'',search:'',availableOnly:false}"
+        >
+          Clear filters
+        </button>
+
+      </aside>
+
+      <!-- ===================================================================
+           EQUIPMENT GRID AREA
+           
+           Contains: loading skeletons, error card, empty state, equipment cards, pagination
+           
+           Why separate container?
+           - Flexbox layout (sidebar | grid-area)
+           - Grid area increases in width when sidebar collapses
+           - On mobile, sidebar moves above grid (CSS media query)
+           === -->
+      <div class="equipment-grid-area" style="flex: 1; min-width: 0;">
+
+        <!-- ===============================================================
+             LOADING STATE: Show skeleton cards while fetching from API
+             
+             ng-show="loading" displays this div ONLY while $scope.loading === true
+             
+             Skeleton pattern: 
+             - Shows "shape" of content before it loads
+             - User sees: loading indicator (not: blank page or spinner)
+             - Feels faster (perceived performance)
+             
+             Why show 6 skeletons?
+             - First page shows 12 items (4 rows × 3 cols)
+             - Showing 6 skeletons (2 rows) is enough to signal "loading items"
+             - Doesn't clutter the page with too many skeletons
+             
+             Why ng-repeat="n in [1,2,3,4,5,6]"?
+             - [1,2,3,4,5,6] is a literal array with 6 elements
+             - ng-repeat creates a <div> for each element
+             - "n" variable unused (we don't need its value)
+             - This is a common pattern: "repeat this HTML N times"
+        -->
+        <div class="grid-auto" ng-show="loading">
+          <div class="card skeleton-card" ng-repeat="n in [1,2,3,4,5,6]">
+            <!-- Fake image area -->
+            <div class="skeleton" style="height: 120px; margin-bottom: var(--space-2); border-radius: var(--radius-md);"></div>
+            <!-- Fake title -->
+            <div class="skeleton" style="height: 20px; width: 70%; margin-bottom: var(--space-1);"></div>
+            <!-- Fake description -->
+            <div class="skeleton" style="height: 14px; width: 40%;"></div>
+          </div>
+        </div>
+
+        <!-- ===============================================================
+             ERROR STATE
+             
+             ng-show="!loading && error" displays ONLY if:
+             - NOT loading (loading === false)
+             - AND error message exists (error !== null)
+             
+             error is set by .catch() in loadEquipment() if API call fails.
+             
+             Why show error card instead of modal/alert?
+             - Less intrusive (user can dismiss by clicking Retry)
+             - Stays in context (right where equipment should be)
+             - User knows exactly what failed (didn't show equipment, can retry)
+             
+             {{error}} displays the error message from backend
+             Example: "Failed to fetch equipment"
+        -->
+        <div class="empty-state card" ng-show="!loading && error" style="padding: var(--space-4); text-align: center;">
+          <p class="heading-sm text-danger">
+            {{error}}
+          </p>
+          <!-- Retry button calls loadEquipment() again -->
+          <button class="btn btn-outline btn-sm" ng-click="loadEquipment()" style="margin-top: var(--space-3);">
+            Retry
+          </button>
+        </div>
+
+        <!-- ===============================================================
+             EMPTY STATE
+             
+             ng-show="!loading && !error && filteredEquipment.length === 0"
+             
+             Displays when:
+             - NOT loading
+             - NO error
+             - AND filtered equipment list is empty
+             
+             Example scenarios:
+             - Search for "xyz" → no matches → show empty state
+             - Filter by "category: Lights" but none exist → show empty state
+             - Checked "Available only" but all out of stock → show empty state
+             
+             Help text "Try adjusting your filters" guides user to fix the issue.
+        -->
+        <div class="empty-state card" ng-show="!loading && !error && filteredEquipment.length === 0" style="padding: var(--space-4); text-align: center;">
+          <p class="heading-sm">No equipment found</p>
+          <p class="body-sm">Try adjusting your filters</p>
+        </div>
+
+        <!-- ===============================================================
+             EQUIPMENT GRID: The main content
+             
+             ng-show="!loading && !error && filteredEquipment.length > 0"
+             Shows grid ONLY if:
+             - NOT loading (have received data from API)
+             - NO error (API call succeeded)
+             - AND there's equipment to show (found at least 1 item)
+             
+             .grid-auto is CSS Grid utility:
+             - Responsive: auto-fill minmax(300px, 1fr)
+             - Means: fit as many 300px cards as possible in row, expand to fill
+             - Mobile: 1 column (300px < viewport width)
+             - Tablet: 2 columns (2×300px fit)
+             - Desktop: 3 columns (3×300px fit)
+             
+             ng-repeat="item in paginatedEquipment() track by item.id"
+             - paginatedEquipment() returns items for current page only (sliced array)
+             - "track by item.id" tells AngularJS how to identify unique items
+             
+             track by optimization:
+             - Without: AngularJS uses array position to track items
+             - If list reorders, AngularJS recreates all DOM nodes (slow, loses state)
+             - With: AngularJS uses item.id, recognizes reordered items as same objects
+             - Only updates changed items (fast, preserves input focus, etc.)
+             === -->
+        <div class="grid-auto" ng-show="!loading && !error && filteredEquipment.length > 0">
+
+          <!-- ============================================================
+               EQUIPMENT CARD (repeated for each item in paginatedEquipment)
+               
+               ng-class="{'card--accent': isInCart(item.id)}"
+               - If item is in cart: add 'card--accent' class (highlights with accent border + glow)
+               - If not in cart: no special class (normal appearance)
+               - This visual feedback confirms "I added this to cart"
+               
+               ng-repeat="item in paginatedEquipment() track by item.id"
+               - Loops through current page's items
+               - track by item.id optimizes re-renders
+               === -->
+          <div class="card equipment-card" ng-class="{'card--accent': isInCart(item.id)}">
+
+            <!-- Card top: Category badge + Stock badge -->
+            <div class="card-top" style="display: flex; gap: var(--space-1); margin-bottom: var(--space-2); flex-wrap: wrap;">
+              <!-- Category badge: gray/muted (informational, not action) -->
+              <span class="badge badge-muted">
+                {{item.category_name}}
+              </span>
+
+              <!-- Stock badge: color-coded for status
+                   ng-class ternary: if stock > 0 → success (green), else danger (red)
+                   
+                   Text shows:
+                   - "5 available" (in stock)
+                   - "Out of stock" (stock_qty === 0)
+                   
+                   Why color-code stock?
+                   - Users instantly see if item is buyable
+                   - Green = "go", Red = "stop"
+                   - No need to read text (scans grid quickly)
+              -->
+              <span class="badge" ng-class="item.stock_qty > 0 ? 'badge-success' : 'badge-danger'">
+                <!-- Ternary operator: true ? valueIfTrue : valueIfFalse -->
+                {{item.stock_qty > 0 ? item.stock_qty + ' available' : 'Out of stock'}}
+              </span>
+            </div>
+
+            <!-- Equipment name (clickable for detail page) -->
+            <h3 
+              class="heading-sm equipment-name" 
+              ng-click="viewDetail(item.id)"
+              style="cursor: pointer; margin: var(--space-2) 0 var(--space-1); transition: color var(--duration) var(--ease);"
+              onmouseover="this.style.color='var(--sa-accent)'"
+              onmouseout="this.style.color='var(--sa-text-primary)'"
+            >
+              {{item.name}}
+            </h3>
+
+            <!-- Description (truncated to 1 line with ellipsis) -->
+            <!-- .truncate CSS class: overflow hidden + text-overflow ellipsis + white-space nowrap -->
+            <p class="body-sm truncate" style="margin-bottom: var(--space-3); color: var(--sa-text-muted);">
+              {{item.description}}
+            </p>
+
+            <!-- ============================================================
+                 PRICE DISPLAY: The key differentiator
+                 
+                 Shows:
+                 1. Current price (large, prominent): ₹4,500
+                 2. Base price (strikethrough, small): Base: ₹3,200
+                 3. Algorithm context (badge, color-coded): +40% algo
+                 
+                 The algorithm makes a transparent decision:
+                 - Base ₹3,200 is the default price
+                 - Algorithm computes optimal price: ₹4,500
+                 - Shows +40% markup (demand is high, limited stock)
+                 - User understands: "That's fair, demand > supply"
+                 
+                 vs Hidden algorithm:
+                 - Just show ₹4,500
+                 - User thinks: "Why so expensive?"
+                 - Distrust
+                 
+                 Transparency builds trust.
+                 === -->
+            <div class="price-block" style="margin-bottom: var(--space-3);">
+              
+              <!-- Current price: prominently displayed -->
+              <!-- {{item.current_price | number:0}} formats: 4500.5 → 4,501 (rounded) -->
+              <span class="price-current" style="font-size: 1.5rem; font-weight: 600; color: var(--sa-accent);">
+                ₹{{item.current_price | number:0}}
+              </span>
+
+              <!-- Base price: hidden if current == base (no markup) -->
+              <!-- ng-show only shows if true; keeps DOM clean -->
+              <span class="price-base" ng-show="item.current_price != item.base_price" style="font-size: 0.875rem; color: var(--sa-text-muted); text-decoration: line-through;">
+                Base: ₹{{item.base_price | number:0}}
+              </span>
+
+              <!-- Price uplift context: badge with dynamic class and text -->
+              <!-- priceStateClass(item) returns 'badge-warning' or 'badge-accent' etc. based on uplift % -->
+              <!-- priceUpliftText(item) returns "+12% algo" or "Base price" -->
+              <span class="badge" ng-class="priceStateClass(item)" style="margin-top: var(--space-1);">
+                {{priceUpliftText(item)}}
+              </span>
+
+            </div>
+
+            <!-- Card actions: Details + Add to Cart buttons -->
+            <!-- .flex.gap-1 creates horizontal layout -->
+            <div class="flex gap-1">
+
+              <!-- Details button: secondary action (outline style) -->
+              <!-- ng-click="viewDetail(item.id)" navigates to /equipment/:id -->
+              <button 
+                class="btn btn-outline btn-sm" 
+                ng-click="viewDetail(item.id)"
+                style="flex: 1;"
+              >
+                Details
+              </button>
+
+              <!-- Add to Cart / Added button: primary action (changes based on state) -->
+              <!-- 
+                   ng-class ternary: 
+                   - If in cart: 'btn-primary' (filled, prominent)
+                   - If not: 'btn-outline' (secondary)
+                   
+                   ng-disabled: disables button if out of stock
+                   - Button becomes grayed out + not clickable
+                   - Prevents adding unavailable items
+                   
+                   Button text also changes:
+                   - Not in cart: "Add to Booking" (call-to-action)
+                   - In cart: "✓ Added" (confirmation, visual feedback)
+              -->
+              <button 
+                class="btn btn-sm" 
+                ng-class="isInCart(item.id) ? 'btn-primary' : 'btn-outline'"
+                ng-disabled="item.stock_qty === 0"
+                ng-click="addToCart(item)"
+                style="flex: 1;"
+              >
+                {{isInCart(item.id) ? '✓ Added' : 'Add to Booking'}}
+              </button>
+
+            </div>
+
+          </div>
+          <!-- End equipment card -->
+
+        </div>
+        <!-- End equipment grid -->
+
+        <!-- ===============================================================
+             PAGINATION
+             
+             ng-show="totalPages() > 1"
+             Only show if more than 1 page exists.
+             
+             Pagination buttons:
+             - Previous button (disabled on page 1)
+             - Number buttons (1, 2, 3, ...): ng-repeat through pageNumbers()
+             - Next button (disabled on last page)
+             
+             Why disable buttons instead of hiding them?
+             - Shows user they're at the boundary (can't go further)
+             - Keeps button layout stable (no UI shift)
+             - More accessible (screen readers can see disabled state)
+             === -->
+        <div class="pagination" ng-show="totalPages() > 1" style="display: flex; gap: var(--space-1); justify-content: center; margin-top: var(--space-4); flex-wrap: wrap;">
+
+          <!-- Previous button -->
+          <button 
+            class="btn btn-outline btn-sm" 
+            ng-click="currentPage = currentPage - 1"
+            ng-disabled="currentPage === 1"
+          >
+            ← Prev
+          </button>
+
+          <!-- Page number buttons (dynamic) -->
+          <!-- pageNumbers() returns [1, 2, 3, 4, ...]
+               This creates a button for each page. -->
+          <button 
+            class="btn btn-sm"
+            ng-repeat="page in pageNumbers()"
+            ng-class="page === currentPage ? 'btn-primary' : 'btn-outline'"
+            ng-click="currentPage = page"
+          >
+            {{page}}
+          </button>
+
+          <!-- Next button -->
+          <button 
+            class="btn btn-outline btn-sm"
+            ng-click="currentPage = currentPage + 1"
+            ng-disabled="currentPage === totalPages()"
+          >
+            Next →
+          </button>
+
+        </div>
+
+      </div>
+      <!-- End equipment grid area -->
+
+    </div>
+    <!-- End main layout (sidebar + grid) -->
+
+  </div>
+  <!-- End container -->
+
+</div>
+<!-- End page -->
+
+<!-- =====================================================================
+     RESPONSIVE STYLES FOR EQUIPMENT PAGE
+     
+     Adapt layout for different screen sizes.
+     === -->
+<style>
+  /* Page structure */
+  .equipment-page {
+    padding: var(--space-3) 0;
+  }
+
+  .page-header {
+    flex-wrap: wrap;
+  }
+
+  /* Filter sidebar: sticky on large screens, relative on small */
+  @media (max-width: 1024px) {
+    .equipment-layout {
+      flex-direction: column !important;
+    }
+    
+    .filter-panel {
+      flex: 0 1 auto !important;
+      max-height: none !important;
+    }
+  }
+
+  /* Mobile: adjust spacing */
+  @media (max-width: 768px) {
+    .page-header {
+      flex-direction: column;
+      gap: var(--space-2) !important;
+    }
+
+    .page-header > div:last-child {
+      align-self: stretch;
+    }
+
+    .page-header select {
+      width: 100% !important;
+    }
+
+    .equipment-layout {
+      gap: var(--space-2) !important;
+    }
+
+    .grid-auto {
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    }
+
+    .card {
+      padding: var(--space-2) !important;
+    }
+
+    .equipment-name {
+      font-size: 1rem !important;
+      margin: var(--space-1) 0 var(--space-1) !important;
+    }
+
+    .price-current {
+      font-size: 1.25rem !important;
+    }
+
+    .btn-sm {
+      padding: 4px 10px !important;
+      font-size: 0.75rem !important;
+    }
+  }
+
+  /* Hover effects on desktop */
+  @media (hover: hover) {
+    .equipment-card:hover {
+      transform: translateY(-4px) !important;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-2px) !important;
+    }
+  }
+</style>

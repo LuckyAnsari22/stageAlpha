@@ -1,0 +1,583 @@
+<!-- 
+  REGISTER.HTML
+  
+  Registration form with password strength indicator.
+  
+  Design philosophy:
+  - Same centered card layout as login
+  - Four form fields: name, email, password, confirm password
+  - PASSWORD STRENGTH INDICATOR: 4 dots representing 4 criteria
+    * Length (≥8 chars)
+    * Uppercase letter (A-Z)
+    * Number (0-9)
+    * Special character (@$!%*?&)
+  - Dots fill in (accent color) as criteria are met
+  - Dots empty (muted color) for unmet criteria
+  - Live feedback as user types
+  - Password strength label below dots
+  - Passwords must match
+  - Submit button disabled until all criteria met + passwords match
+  - Fade-out on success before redirect
+  
+  Teaching goal:
+  Demonstrate real-time form validation, password strength UI,
+  and progressive form state management.
+-->
+
+<div class="auth-page" ng-controller="AuthController" ng-class="{'fading-out': fadingOut}">
+
+  <div class="auth-container">
+    
+    <!-- Card: centered, fixed width -->
+    <div class="auth-card">
+
+      <!-- ===================================================================
+           HEADER: Logo + Tagline
+           =================================================================== -->
+      <div class="auth-header">
+        <h1 class="auth-logo">
+          Stage<span class="auth-logo-accent">Alpha</span>
+        </h1>
+        <p class="auth-tagline">
+          Create Your Account
+        </p>
+      </div>
+
+      <!-- ===================================================================
+           REGISTER FORM
+           
+           Four fields: name, email, password, confirm password
+           Real-time password strength analysis with visual indicator.
+           =================================================================== -->
+      <form class="auth-form" ng-submit="register()" novalidate>
+
+        <!-- Name field -->
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input
+            type="text"
+            ng-model="registerForm.name"
+            class="form-input"
+            placeholder="Your full name"
+            required
+            autocomplete="name"
+          />
+        </div>
+
+        <!-- Email field -->
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input
+            type="email"
+            ng-model="registerForm.email"
+            class="form-input"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+          />
+        </div>
+
+        <!-- Password field with show/hide toggle -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label class="form-label">Password</label>
+            <!-- Show/hide toggle for password -->
+            <button
+              type="button"
+              class="password-toggle"
+              ng-click="registerForm.showPassword = !registerForm.showPassword"
+              aria-label="Toggle password visibility"
+            >
+              <span ng-show="!registerForm.showPassword">👁️</span>
+              <span ng-show="registerForm.showPassword">👁️‍🗨️</span>
+            </button>
+          </div>
+
+          <!-- Password input: type changes based on showPassword state -->
+          <input
+            ng-attr-type="{{registerForm.showPassword ? 'text' : 'password'}}"
+            ng-model="registerForm.password"
+            ng-keyup="analyzePasswordStrength(registerForm.password)"
+            class="form-input"
+            placeholder="••••••••"
+            required
+            autocomplete="new-password"
+          />
+
+          <!-- ===============================================================
+               PASSWORD STRENGTH INDICATOR: 4 dots for 4 criteria
+               
+               Visual design:
+               - 4 dots in a row
+               - Each dot represents one criterion:
+                 1. Length ≥ 8
+                 2. Uppercase letter (A-Z)
+                 3. Number (0-9)
+                 4. Special character (@$!%*?&)
+               - Unmet dot: --sa-text-dim (subtle gray)
+               - Met dot: --sa-accent (electric purple, filled)
+               - Below dots: strength label (Weak/Fair/Good/Strong)
+               
+               Criteria met:
+               - 0 met = no label shown
+               - 1 met = "Weak" (red)
+               - 2 met = "Fair" (orange/warning)
+               - 3 met = "Good" (accent color)
+               - 4 met = "Strong" (green)
+               =============================================================== -->
+          <div class="password-strength-indicator">
+            <!-- Strength dots: one for each criterion -->
+            <div class="strength-dots">
+              <!-- Dot 1: Length ≥ 8 -->
+              <div
+                class="strength-dot"
+                ng-class="getStrengthDotClass(passwordStrength.hasLength)"
+                title="At least 8 characters"
+              >
+                •
+              </div>
+
+              <!-- Dot 2: Uppercase letter -->
+              <div
+                class="strength-dot"
+                ng-class="getStrengthDotClass(passwordStrength.hasUppercase)"
+                title="One uppercase letter"
+              >
+                •
+              </div>
+
+              <!-- Dot 3: Number -->
+              <div
+                class="strength-dot"
+                ng-class="getStrengthDotClass(passwordStrength.hasNumber)"
+                title="One number"
+              >
+                •
+              </div>
+
+              <!-- Dot 4: Special character -->
+              <div
+                class="strength-dot"
+                ng-class="getStrengthDotClass(passwordStrength.hasSpecial)"
+                title="One special character (@$!%*?&)"
+              >
+                •
+              </div>
+            </div>
+
+            <!-- Strength label: Weak/Fair/Good/Strong -->
+            <span
+              class="strength-label"
+              ng-class="getStrengthLabelClass()"
+              ng-show="passwordStrength.score > 0"
+            >
+              {{getStrengthLabel()}}
+            </span>
+          </div>
+        </div>
+
+        <!-- Confirm password field with show/hide toggle -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label class="form-label">Confirm Password</label>
+            <!-- Show/hide toggle for confirm password -->
+            <button
+              type="button"
+              class="password-toggle"
+              ng-click="registerForm.showConfirmPassword = !registerForm.showConfirmPassword"
+              aria-label="Toggle confirm password visibility"
+            >
+              <span ng-show="!registerForm.showConfirmPassword">👁️</span>
+              <span ng-show="registerForm.showConfirmPassword">👁️‍🗨️</span>
+            </button>
+          </div>
+
+          <!-- Confirm password input -->
+          <input
+            ng-attr-type="{{registerForm.showConfirmPassword ? 'text' : 'password'}}"
+            ng-model="registerForm.confirmPassword"
+            class="form-input"
+            ng-class="{'input-error': !passwordsMatch()}"
+            placeholder="••••••••"
+            required
+            autocomplete="new-password"
+          />
+
+          <!-- Error message: passwords don't match -->
+          <p class="form-error" ng-show="!passwordsMatch() && registerForm.confirmPassword">
+            Passwords do not match
+          </p>
+        </div>
+
+        <!-- Submit button: full-width, disabled until form valid -->
+        <button
+          type="submit"
+          class="btn btn-primary btn-full"
+          ng-disabled="!isRegisterFormValid()"
+        >
+          <span ng-show="!submitting">Create Account</span>
+          <span ng-show="submitting">Creating account...</span>
+        </button>
+
+      </form>
+
+      <!-- ===================================================================
+           FOOTER: Link to login if already have account
+           =================================================================== -->
+      <div class="auth-footer">
+        <p class="body-sm text-muted">
+          Already have an account?
+          <a href="#!/login" class="auth-link">Sign in here</a>
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- =====================================================================
+     STYLING: Centered card, password strength indicator, fade-out
+     ===================================================================== -->
+<style>
+  /**
+   * Auth page container: full viewport height, centered flex layout
+   */
+  .auth-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--sa-bg-deep);
+    padding: var(--space-3);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /**
+   * Fade-out animation: before redirect
+   * Opacity transitions from 1 to 0 over 500ms
+   */
+  .auth-page.fading-out {
+    opacity: 0;
+  }
+
+  /**
+   * Auth container: the centered wrapper
+   * max-width: 420px for standard auth form width
+   */
+  .auth-container {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /**
+   * Auth card: the form container
+   * Background, border, padding per design system
+   */
+  .auth-card {
+    background: var(--sa-bg-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /**
+   * Auth header: logo + tagline
+   * Centered, bottom margin
+   */
+  .auth-header {
+    text-align: center;
+    margin-bottom: var(--space-5);
+  }
+
+  /**
+   * Logo: the "StageAlpha" text
+   */
+  .auth-logo {
+    font: 800 1.75rem/1 var(--font-display);
+    color: var(--sa-text-primary);
+    margin: 0 0 var(--space-1) 0;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-logo-accent {
+    color: var(--sa-accent);
+  }
+
+  /**
+   * Tagline: subtitle
+   */
+  .auth-tagline {
+    margin: 0;
+    font: 400 0.875rem/1.4 var(--font-body);
+    color: var(--sa-text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /**
+   * Auth form: form element with spacing
+   */
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  /**
+   * Form group: label + input container
+   */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /**
+   * Form label
+   */
+  .form-label {
+    font: 500 0.75rem var(--font-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sa-text-muted);
+    margin: 0;
+  }
+
+  /**
+   * Label row: label + toggle button on same line
+   */
+  .form-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /**
+   * Password toggle button: show/hide icon
+   */
+  .password-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    color: var(--sa-text-muted);
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-toggle:hover {
+    color: var(--sa-accent);
+  }
+
+  /**
+   * Form input: text field styling
+   */
+  .form-input {
+    background: var(--sa-bg-elevated);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    color: var(--sa-text-primary);
+    font: 400 0.9375rem var(--font-body);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .form-input:focus {
+    border-color: var(--sa-accent);
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  }
+
+  .form-input::placeholder {
+    color: var(--sa-text-dim);
+  }
+
+  /**
+   * Form input error state: red border for invalid password confirmation
+   */
+  .form-input.input-error {
+    border-color: var(--sa-danger);
+  }
+
+  .form-input.input-error:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+  }
+
+  /**
+   * Form error message: displayed below input when validation fails
+   */
+  .form-error {
+    margin: 0;
+    font: 400 0.8125rem var(--font-body);
+    color: var(--sa-danger);
+  }
+
+  /**
+   * PASSWORD STRENGTH INDICATOR
+   * 
+   * Container for strength dots and label
+   * Displayed below the password input field
+   */
+  .password-strength-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: 8px;
+  }
+
+  /**
+   * Strength dots container: 4 dots in a row
+   * Each dot represents one criterion
+   */
+  .strength-dots {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /**
+   * Individual strength dot
+   * Base style: subtle appearance
+   */
+  .strength-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  /**
+   * Strength dot UNMET: criterion not satisfied
+   * Color: --sa-text-dim (subtle gray)
+   * Appearance: faint, not prominent
+   */
+  .strength-dot.strength-dot-unmet {
+    background: rgba(136, 136, 170, 0.2);
+    color: var(--sa-text-dim);
+    border: 1px solid var(--sa-text-dim);
+  }
+
+  /**
+   * Strength dot MET: criterion satisfied
+   * Color: --sa-accent (electric purple)
+   * Appearance: bright, glowing, filled
+   * This is the visual reward for meeting criterion
+   */
+  .strength-dot.strength-dot-met {
+    background: var(--sa-accent);
+    color: white;
+    border: 1px solid var(--sa-accent);
+    box-shadow: 0 0 8px rgba(108, 99, 255, 0.4);
+    transform: scale(1.1);
+  }
+
+  /**
+   * Strength label: text showing password quality
+   * Positioned right of the dots
+   * Color changes based on score:
+   *   - text-danger (1/4 criteria)
+   *   - text-warning (2/4 criteria)
+   *   - text-accent (3/4 criteria)
+   *   - text-success (4/4 criteria)
+   */
+  .strength-label {
+    font: 500 0.8125rem var(--font-body);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: color 0.2s ease;
+  }
+
+  /**
+   * Text color utilities: used by strength label and other elements
+   */
+  .text-danger {
+    color: var(--sa-danger);
+  }
+
+  .text-warning {
+    color: var(--sa-warning);
+  }
+
+  .text-accent {
+    color: var(--sa-accent);
+  }
+
+  .text-success {
+    color: var(--sa-success);
+  }
+
+  .text-muted {
+    color: var(--sa-text-muted);
+  }
+
+  /**
+   * Submit button: full-width, primary style
+   */
+  .btn-full {
+    width: 100%;
+  }
+
+  /**
+   * Auth footer: sign in link
+   */
+  .auth-footer {
+    text-align: center;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--sa-border);
+  }
+
+  /**
+   * Auth link: sign in link
+   */
+  .auth-link {
+    color: var(--sa-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .auth-link:hover {
+    color: #7d75ff;
+    text-decoration: underline;
+  }
+
+  /**
+   * Mobile responsive
+   */
+  @media (max-width: 480px) {
+    .auth-card {
+      padding: var(--space-4);
+    }
+
+    .auth-header {
+      margin-bottom: var(--space-4);
+    }
+
+    .auth-logo {
+      font-size: 1.5rem;
+    }
+
+    .password-strength-indicator {
+      flex-wrap: wrap;
+      gap: var(--space-1);
+    }
+
+    .strength-dots {
+      gap: 6px;
+    }
+
+    .strength-dot {
+      width: 10px;
+      height: 10px;
+    }
+  }
+</style>

@@ -1,0 +1,21 @@
+-- ============================================================================
+-- STAGEALPHA PROJECT QUERIES
+-- ============================================================================
+-- 20 annotated SQL queries demonstrating DBMS course concepts
+-- 
+-- Distribution:
+-- - 4 JOINs (INNER, LEFT, multi-table, SELF)
+-- - 3 Aggregates with GROUP BY and HAVING
+-- - 2 Non-correlated subqueries
+-- - 2 Correlated subqueries
+-- - 2 Window functions (RANK, ROW_NUMBER, LEAD/LAG)
+-- - 2 CTEs (WITH clause)
+-- - 1 REGR_SLOPE (elasticity estimation)
+-- - 1 Full-text search
+-- - 1 JSONB query
+-- 
+-- This file will be populated in SESSION 05
+-- ============================================================================
+
+-- This file can be executed with:
+-- psql -d stagealpha -f db/queries/project_queries.sql

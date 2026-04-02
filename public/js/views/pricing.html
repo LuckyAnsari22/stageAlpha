@@ -1,0 +1,740 @@
+<!-- 
+  PRICING.HTML - SESSION 08
+  
+  The Pricing Simulator: Where the algorithm becomes visible.
+  
+  This page demonstrates the core innovation of StageAlpha:
+  - Pick an equipment item + event date
+  - See exactly how the algorithm decomposes the price
+  - Visual pipeline: base → elasticity → seasonal → inventory → final price
+  - Understanding through visualization
+  
+  Design philosophy:
+  - Bloomberg terminal aesthetic (financial data visualization)
+  - Dark theme with accent highlights
+  - Everything is about showing the algorithm's reasoning
+  - Each factor (elasticity, seasonality, inventory) is explained inline
+  
+  Key visualization patterns:
+  - Price pipeline: flexbox flow with connecting arrows
+  - Each stage: a card with value on top, factor name in middle, explanation at bottom
+  - Final price: larger than base (shows impact of algorithm)
+  - Confidence badge: HIGH/MEDIUM/LOW based on elasticity datapoints
+  - Revenue comparison: side-by-side stat blocks with uplift arrow
+  - Price history: Chart.js line chart showing 30-day price evolution
+-->
+
+<div class="pricing-page" ng-controller="PricingController">
+
+  <!-- =====================================================================
+       PAGE HEADER
+       ===================================================================== -->
+  <div class="container">
+    <div style="padding: var(--space-4) 0;">
+      <h1 class="display-lg">Pricing Simulator</h1>
+      <p class="body-md text-muted">
+        Select equipment and event date to see the exact algorithm calculation.
+        Understand how demand elasticity, seasonality, and inventory drive pricing.
+      </p>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SESSION 12: HEADLINE RESULT — The biggest number on the page
+       The improvement percentage with upward arrow (if positive)
+       ===================================================================== -->
+  <div ng-show="priceBreakdown && !breakdownLoading" class="container" style="margin-bottom: var(--space-5);">
+    <div class="headline-section" style="
+      background: var(--sa-bg-surface);
+      border: 1px solid var(--sa-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-5);
+      text-align: center;
+    ">
+      <!-- Upward arrow emoji + percentage (only if positive) -->
+      <div ng-show="priceBreakdown.uplift_pct > 0" style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-2);
+      ">
+        <span style="font-size: 2rem; color: var(--sa-success);">↑</span>
+        <p class="display-xl" style="
+          margin: 0;
+          color: var(--sa-success);
+          font: 800 4rem/1 var(--font-display);
+          letter-spacing: -0.02em;
+        ">
+          {{(priceBreakdown.uplift_pct).toFixed(1)}}%
+        </p>
+      </div>
+
+      <!-- Label under the metric -->
+      <p class="heading-md text-muted" style="margin: 0; margin-bottom: var(--space-2);">
+        Revenue Improvement
+      </p>
+
+      <!-- Description -->
+      <p class="body-md text-muted">
+        Charging <span class="text-accent">₹{{priceBreakdown.final_optimal_price | number:0}}</span> instead of 
+        <span class="text-muted">₹{{priceBreakdown.base_price | number:0}}</span> 
+        could increase weekly revenue by <span class="text-success">{{(priceBreakdown.uplift_pct).toFixed(1)}}%</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SELECTOR ROW: Equipment + Date + Calculate Button
+       ===================================================================== -->
+  <div class="container">
+    <div class="selector-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-3); margin-bottom: var(--space-5);">
+      
+      <!-- Equipment Dropdown -->
+      <!-- ng-model="selectedEquipment" binds to controller's $scope.selectedEquipment
+           When user selects an item, the $watch in controller fires calculatePrice() -->
+      <div class="form-group">
+        <label class="form-label">Select Equipment</label>
+        <select ng-model="selectedEquipment" class="form-input" style="width: 100%;">
+          <option value="">-- Choose equipment --</option>
+          <!-- ng-repeat loops through $scope.equipment array
+               value="{{eq.id}}" converts ID to string (HTML requirement)
+               {{eq.name}} displays the equipment name -->
+          <option ng-repeat="eq in equipment" value="{{eq.id}}">
+            {{eq.name}} — ₹{{eq.base_price | number:0}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Event Date Picker -->
+      <!-- ng-model="selectedDate" binds to ISO date string "YYYY-MM-DD"
+           When user picks a date, $watch fires calculatePrice() -->
+      <div class="form-group">
+        <label class="form-label">Event Date</label>
+        <!-- type="date" renders native date picker (mobile-friendly)
+             Value is ISO format: "2025-03-15" -->
+        <input 
+          type="date" 
+          ng-model="selectedDate" 
+          class="form-input"
+          style="width: 100%;"
+        />
+      </div>
+
+      <!-- Calculate Button (visual confirmation) -->
+      <!-- Button is always ready to click (though calculation happens automatically via $watch)
+           Shows loading spinner while API call in flight -->
+      <button 
+        class="btn btn-primary" 
+        ng-click="calculatePrice()"
+        ng-disabled="!selectedEquipment || !selectedDate || breakdownLoading"
+        style="align-self: flex-end; height: 46px;"
+      >
+        <span ng-show="!breakdownLoading">Calculate</span>
+        <span ng-show="breakdownLoading">Loading...</span>
+      </button>
+
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       PRICE BREAKDOWN: The Core Visualization
+       
+       Only show if:
+       1. Both equipment AND date are selected (not null/empty)
+       2. API call succeeded (priceBreakdown !== null)
+       3. NOT currently loading
+       
+       Design: Price flows left-to-right through a pipeline.
+       Each stage shows the multiplier and reasoning.
+       Final price is highlighted (largest, accent glow).
+       ===================================================================== -->
+  <div ng-show="priceBreakdown && !breakdownLoading" class="container">
+
+    <!-- Pipeline Container -->
+    <!-- 
+         Layout: horizontal flow with 5 stages
+         - Stage 1: Base price (input)
+         - Stage 2: Apply elasticity factor
+         - Stage 3: Apply seasonality factor
+         - Stage 4: Apply inventory factor
+         - Stage 5: Final optimal price (output)
+         
+         Connected by arrows (→) showing value flowing through pipeline.
+    -->
+    <div class="price-pipeline" style="
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      overflow-x: auto;
+      padding-bottom: var(--space-2);
+    ">
+
+      <!-- ================================================================
+           STAGE 1: BASE PRICE
+           
+           This is the input. No transformation yet.
+           Shows: the equipment's base rental price
+           ================================================================ -->
+      <div class="pipeline-stage" style="flex: 0 0 auto; min-width: 220px;">
+        <div class="pipeline-stage-card" style="
+          background: var(--sa-bg-surface);
+          border: 1px solid var(--sa-border);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          text-align: center;
+        ">
+          <!-- Stage label -->
+          <p class="label" style="margin-bottom: var(--space-1);">BASE PRICE</p>
+          
+          <!-- The price value (large, prominent) -->
+          <p class="display-md" style="
+            font: 700 2rem/1 var(--font-display);
+            margin-bottom: var(--space-2);
+            color: var(--sa-text-primary);
+          ">
+            ₹{{priceBreakdown.base_price | number:0}}
+          </p>
+          
+          <!-- Statistical confidence: how many datapoints went into elasticity estimate -->
+          <!-- Example: "(n=42, r²=0.82)" means 42 bookings, 82% variance explained -->
+          <p class="body-sm text-muted">
+            n={{priceBreakdown.elasticity_info.n_datapoints}}, 
+            r²={{(priceBreakdown.elasticity_info.r_squared * 100).toFixed(0)}}%
+          </p>
+        </div>
+      </div>
+
+      <!-- ================================================================
+           ARROW: Showing value flows right
+           ================================================================ -->
+      <div style="
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        color: var(--sa-accent);
+        margin-top: var(--space-2);
+      ">
+        →
+      </div>
+
+      <!-- ================================================================
+           STAGE 2: ELASTICITY FACTOR
+           
+           Key insight: how quantity demanded changes with price.
+           elasticity_coeff: typically -1.5 to -2.0 (elastic demand)
+           elasticity_factor: the multiplier to apply (e.g., ×1.20)
+           
+           Example: ε = -1.82 means 1% price increase → 1.82% quantity decrease
+           ================================================================ -->
+      <div class="pipeline-stage" style="flex: 0 0 auto; min-width: 220px;">
+        <div class="pipeline-stage-card" style="
+          background: var(--sa-bg-surface);
+          border: 1px solid var(--sa-border);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          text-align: center;
+        ">
+          <!-- Multiplier badge (shows the transformation) -->
+          <p class="label" style="margin-bottom: var(--space-1);">ELASTICITY</p>
+          <p style="
+            font: 700 1.5rem/1 var(--font-display);
+            color: var(--sa-accent);
+            margin-bottom: var(--space-1);
+          ">
+            ×{{priceBreakdown.elasticity_factor.toFixed(2)}}
+          </p>
+          
+          <!-- Detailed explanation -->
+          <!-- ε is the elasticity coefficient from regression
+               Tells us: for each 1% price change, quantity changes by ε%
+               Used to calculate optimal price via Lerner formula -->
+          <p class="body-sm text-muted">
+            ε = {{priceBreakdown.elasticity_info.coeff.toFixed(2)}}
+            <br/>
+            <span ng-show="Math.abs(priceBreakdown.elasticity_info.coeff) > 1" class="text-muted">
+              (Elastic)
+            </span>
+            <span ng-show="Math.abs(priceBreakdown.elasticity_info.coeff) <= 1" class="text-muted">
+              (Inelastic)
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        color: var(--sa-accent);
+        margin-top: var(--space-2);
+      ">
+        →
+      </div>
+
+      <!-- ================================================================
+           STAGE 3: SEASONALITY FACTOR
+           
+           Markets have cycles. Event equipment bookings peak at:
+           - November-February (wedding season in India)
+           - December-January (New Year + Christmas parties)
+           - Troughs: May-August (monsoon, summer heat)
+           
+           Factor ranges from 0.85x to 1.35x
+           ================================================================ -->
+      <div class="pipeline-stage" style="flex: 0 0 auto; min-width: 220px;">
+        <div class="pipeline-stage-card" style="
+          background: var(--sa-bg-surface);
+          border: 1px solid var(--sa-border);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          text-align: center;
+        ">
+          <p class="label" style="margin-bottom: var(--space-1);">SEASONALITY</p>
+          <p style="
+            font: 700 1.5rem/1 var(--font-display);
+            color: var(--sa-accent);
+            margin-bottom: var(--space-1);
+          ">
+            ×{{priceBreakdown.seasonality_factor.toFixed(2)}}
+          </p>
+          
+          <!-- Human-readable seasonality reason -->
+          <!-- Example: "Wedding season" or "Off-season discount" or "Summer peak" -->
+          <p class="body-sm text-muted">
+            {{priceBreakdown.seasonality_reason}}
+          </p>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        color: var(--sa-accent);
+        margin-top: var(--space-2);
+      ">
+        →
+      </div>
+
+      <!-- ================================================================
+           STAGE 4: INVENTORY FACTOR
+           
+           Scarcity creates premium pricing (basic economics).
+           If we have 100 units in stock: 1.00x (normal)
+           If we have 5 units left: 1.25x (approaching scarcity)
+           If we have 1 unit left: 1.35x (premium)
+           
+           This prevents overbooking and maximizes revenue
+           ================================================================ -->
+      <div class="pipeline-stage" style="flex: 0 0 auto; min-width: 220px;">
+        <div class="pipeline-stage-card" style="
+          background: var(--sa-bg-surface);
+          border: 1px solid var(--sa-border);
+          border-radius: var(--radius-lg);
+          padding: var(--space-3);
+          text-align: center;
+        ">
+          <p class="label" style="margin-bottom: var(--space-1);">INVENTORY</p>
+          <p style="
+            font: 700 1.5rem/1 var(--font-display);
+            color: var(--sa-accent);
+            margin-bottom: var(--space-1);
+          ">
+            ×{{priceBreakdown.inventory_factor.toFixed(2)}}
+          </p>
+          
+          <!-- Human-readable inventory reason -->
+          <!-- Example: "Only 2 left" or "Good supply" -->
+          <p class="body-sm text-muted">
+            {{priceBreakdown.inventory_reason}}
+          </p>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div style="
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        font-size: 1.5rem;
+        color: var(--sa-accent);
+        margin-top: var(--space-2);
+      ">
+        →
+      </div>
+
+      <!-- ================================================================
+           STAGE 5: FINAL OPTIMAL PRICE
+           
+           This is the OUTPUT of the algorithm.
+           The price that maximizes revenue given current conditions.
+           
+           Visual design:
+           - Larger than other stages (emphasizes importance)
+           - Accent color (stands out)
+           - Glow shadow (premium feel)
+           - Confidence badge (HIGH/MEDIUM/LOW)
+           
+           Confidence indicators:
+           - HIGH: 10+ datapoints, reliable elasticity estimate
+           - MEDIUM: 5-9 datapoints, reasonable confidence
+           - LOW: <5 datapoints, use with caution
+           ================================================================ -->
+      <div class="pipeline-stage" style="flex: 0 0 auto; min-width: 260px;">
+        <div class="pipeline-stage-card" style="
+          background: var(--sa-bg-elevated);
+          border: 2px solid var(--sa-accent);
+          border-radius: var(--radius-lg);
+          padding: var(--space-4);
+          text-align: center;
+          box-shadow: var(--shadow-accent);
+          position: relative;
+        ">
+          <!-- Confidence badge (top-right corner) -->
+          <span class="badge" 
+                ng-class="confidenceStyle(priceBreakdown.confidence)"
+                style="position: absolute; top: 10px; right: 10px;">
+            {{priceBreakdown.confidence}}
+          </span>
+
+          <!-- Label -->
+          <p class="label" style="margin-bottom: var(--space-2);">FINAL PRICE</p>
+          
+          <!-- The final price (largest, most prominent) -->
+          <p style="
+            font: 800 3rem/1 var(--font-display);
+            color: var(--sa-accent);
+            margin-bottom: var(--space-1);
+            letter-spacing: -0.02em;
+          ">
+            ₹{{priceBreakdown.final_optimal_price | number:0}}
+          </p>
+          
+          <!-- Breakdown text: how we got here -->
+          <!-- Example: "Base ₹2500 × 1.20 × 1.30 × 1.15 = ₹4,050" -->
+          <p class="body-sm text-muted">
+            {{priceBreakdown.breakdown_text}}
+          </p>
+        </div>
+      </div>
+
+    </div>
+    <!-- End pipeline -->
+
+    <!-- ================================================================
+         REVENUE COMPARISON: The Impact
+         
+         This shows WHY the algorithm matters.
+         "If we charged base price: ₹X revenue"
+         "If we charge optimal price: ₹Y revenue"
+         "Difference: +Z% (that's real money our algorithm earned)"
+         
+         Layout: Two stat blocks with an upward arrow between them
+         ================================================================ -->
+    <div class="revenue-comparison" style="
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: var(--space-3);
+      margin-bottom: var(--space-5);
+      align-items: center;
+    ">
+
+      <!-- Left stat: Revenue at base price -->
+      <div class="stat-card card" style="padding: var(--space-4); text-align: center;">
+        <p class="label" style="margin-bottom: var(--space-1);">AT BASE PRICE</p>
+        <p class="display-md" style="
+          font: 700 1.75rem/1 var(--font-display);
+          margin-bottom: var(--space-2);
+        ">
+          ₹{{priceBreakdown.base_estimated_revenue | number:0}}
+        </p>
+        <p class="body-sm text-muted">
+          Estimated weekly revenue
+        </p>
+      </div>
+
+      <!-- Middle: Upward arrow showing improvement -->
+      <div style="
+        font-size: 2rem;
+        text-align: center;
+        color: var(--sa-success);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      ">
+        ↑
+        <span class="label" style="font-size: 0.75rem; color: var(--sa-success); letter-spacing: 0.04em;">
+          {{(priceBreakdown.uplift_pct).toFixed(1)}}%
+        </span>
+      </div>
+
+      <!-- Right stat: Revenue at optimal price -->
+      <div class="stat-card card" style="
+        padding: var(--space-4);
+        text-align: center;
+        border-color: var(--sa-success);
+        background: rgba(34, 197, 94, 0.05);
+      ">
+        <p class="label" style="margin-bottom: var(--space-1); color: var(--sa-success);">
+          AT OPTIMAL PRICE
+        </p>
+        <p class="display-md" style="
+          font: 700 1.75rem/1 var(--font-display);
+          margin-bottom: var(--space-2);
+          color: var(--sa-success);
+        ">
+          ₹{{priceBreakdown.estimated_revenue | number:0}}
+        </p>
+        <p class="body-sm text-muted">
+          Estimated weekly revenue
+        </p>
+      </div>
+
+    </div>
+    <!-- End revenue comparison -->
+
+  </div>
+
+  <!-- =====================================================================
+       PRICE HISTORY CHART
+       
+       Shows 30 days of price history for the selected equipment.
+       
+       Why include history?
+       - Proves the algorithm is continuously updating prices
+       - Shows pricing strategy over time
+       - Helps admin understand patterns
+       - Transparency: algorithm isn't a black box
+       ===================================================================== -->
+  <div ng-show="priceHistory.length > 0" class="container" style="margin-bottom: var(--space-5);">
+    <div class="card" style="padding: var(--space-4);">
+      <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+        30-Day Price History
+      </h2>
+      
+      <!-- Canvas element for Chart.js -->
+      <!-- Chart.js will render a line chart here
+           The controller calls initPriceChart() which populates this -->
+      <canvas id="priceHistoryChart" style="max-height: 300px;"></canvas>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       SESSION 12: REVENUE COMPARISON CHART
+       
+       Dual-line comparison: Actual Revenue vs Algorithm Revenue
+       
+       Visual impact:
+       - --sa-text-muted line: what was actually earned (historical baseline)
+       - --sa-accent line: what could have been earned with algorithm (optimization)
+       - The gap between the lines = algorithm's ROI in revenue dollars
+       
+       This chart proves the algorithm works on real historical data.
+       ===================================================================== -->
+  <div ng-show=\"revenueComparison.length > 0\" class=\"container\" style=\"margin-bottom: var(--space-5);\">
+    <div class=\"card\" style=\"padding: var(--space-4);\">
+      <h2 class=\"heading-md\" style=\"margin-bottom: var(--space-3);\">
+        90-Day Revenue Comparison
+      </h2>
+      <p class=\"body-sm text-muted\" style=\"margin-bottom: var(--space-3);\">
+        Compare actual revenue (what was earned) vs algorithm revenue (what could have been earned).
+        The gap shows the algorithm's revenue optimization potential.
+      </p>
+      
+      <!-- Canvas element for comparison chart -->
+      <!-- Shows two lines:
+           1. Actual Revenue (muted color) — historical baseline
+           2. Algorithm Revenue (accent color) — optimized pricing -->
+      <canvas id=\"comparisonChart\" style=\"max-height: 350px;\"></canvas>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       BATCH PRICE UPDATE SECTION
+       
+       For admins to trigger algorithm on ALL equipment at once.
+       
+       Flow:
+       1. Click "Update All Prices"
+       2. Confirm the action (can't be undone)
+       3. Progress bar shows live updates
+       4. Table shows results: which prices changed, by how much
+       
+       This demonstrates:
+       - Real-time Socket.IO streaming
+       - Batch operations
+       - Admin power tools
+       ===================================================================== -->
+  <div class="container" style="margin-bottom: var(--space-5);">
+    <div class="batch-update card" style="padding: var(--space-4);">
+      
+      <!-- Header -->
+      <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+        Batch Price Update
+      </h2>
+      <p class="body-sm text-muted" style="margin-bottom: var(--space-3);">
+        Recalculate optimal prices for all equipment items using today's algorithm parameters.
+        This updates current_price for each item based on elasticity, seasonality, and inventory.
+      </p>
+
+      <!-- Trigger Button -->
+      <button 
+        class="btn btn-primary"
+        ng-click="batchUpdatePrices()"
+        ng-disabled="updateInProgress || equipment.length === 0"
+        style="margin-bottom: var(--space-3);"
+      >
+        <span ng-show="!updateInProgress">Update All Prices</span>
+        <span ng-show="updateInProgress">Updating...</span>
+      </button>
+
+      <!-- Progress Bar (shown while updating) -->
+      <div ng-show="updateInProgress" style="margin-bottom: var(--space-3);">
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        ">
+          <span class="body-sm">Processing equipment items...</span>
+          <span class="body-sm">{{updateProgress}}/{{updateTotal}}</span>
+        </div>
+        
+        <!-- HTML5 progress element -->
+        <progress 
+          value="{{updateProgress}}" 
+          max="{{updateTotal}}"
+          style="
+            width: 100%;
+            height: 8px;
+            border-radius: var(--radius-md);
+            background: var(--sa-bg-elevated);
+            border: 1px solid var(--sa-border);
+            overflow: hidden;
+          "
+        ></progress>
+      </div>
+
+      <!-- Results Table (shown after update completes) -->
+      <div ng-show="updateResults.length > 0 && !updateInProgress">
+        <h3 class="heading-sm" style="margin-bottom: var(--space-2);">Update Results</h3>
+        
+        <table class="sa-table">
+          <thead>
+            <tr>
+              <th>Equipment</th>
+              <th>Old Price</th>
+              <th>New Price</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- ng-repeat loops through update results
+                 Shows: equipment name, prices before/after, change percentage -->
+            <tr ng-repeat="result in updateResults | orderBy:'-change_pct'">
+              <td class="body-md">{{result.equipment_name}}</td>
+              <td class="body-md">₹{{result.old_price | number:0}}</td>
+              <td class="body-md">₹{{result.new_price | number:0}}</td>
+              <td class="body-sm">
+                <!-- Color-code the change: red if down, green if up -->
+                <span ng-class="result.change_pct >= 0 ? 'text-success' : 'text-danger'">
+                  {{result.change_pct >= 0 ? '+' : ''}}{{(result.change_pct).toFixed(1)}}%
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- =====================================================================
+     STYLING: Responsive Adjustments
+     ===================================================================== -->
+<style>
+  .pricing-page {
+    padding: var(--space-4) 0;
+  }
+
+  .selector-row {
+    background: var(--sa-bg-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .pipeline-stage-card {
+    transition: all var(--duration) var(--ease);
+  }
+
+  .pipeline-stage-card:hover {
+    border-color: var(--sa-border-light);
+    transform: translateY(-2px);
+  }
+
+  .stat-card {
+    transition: all var(--duration) var(--ease);
+  }
+
+  .stat-card:hover {
+    border-color: var(--sa-border-light);
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .selector-row {
+      grid-template-columns: 1fr !important;
+      gap: var(--space-2) !important;
+    }
+
+    .price-pipeline {
+      flex-direction: column;
+      gap: var(--space-2) !important;
+    }
+
+    .pipeline-stage {
+      min-width: 100% !important;
+    }
+
+    .revenue-comparison {
+      grid-template-columns: 1fr !important;
+      gap: var(--space-2) !important;
+    }
+
+    .revenue-comparison > div:nth-child(2) {
+      transform: rotate(90deg);
+      margin: 8px 0;
+    }
+
+    .sa-table {
+      font-size: 0.8rem;
+    }
+
+    .sa-table th,
+    .sa-table td {
+      padding: 8px 10px !important;
+    }
+  }
+
+  /* Tablet responsive */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .price-pipeline {
+      gap: var(--space-2) !important;
+    }
+
+    .pipeline-stage {
+      min-width: 180px !important;
+    }
+  }
+</style>

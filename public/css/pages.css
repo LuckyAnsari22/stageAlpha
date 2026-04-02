@@ -1,0 +1,233 @@
+/* ================================================
+   PAGES.CSS — Page Specific Theatrical Designs
+   ================================================ */
+
+/* ------------------------------------------------
+   HERO / HOME PAGE
+   ------------------------------------------------ */
+.hero-section {
+  position: relative;
+  min-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* MASSIVE GHOST TYPOGRAPHY (HipHopera Style) */
+.ghost-text {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: min(28vw, 350px);
+  color: transparent;
+  -webkit-text-stroke: 1px var(--text-ghost);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  letter-spacing: 0.02em;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 800px;
+}
+
+.hero-content h1 {
+  margin-bottom: var(--sp-2);
+  text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+}
+
+.hero-divider {
+  width: 60px;
+  height: 2px;
+  background: var(--accent);
+  margin: var(--sp-4) auto;
+}
+
+.hero-content p {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Vertical Rotated Marginal Text (Theater Poster Vibe) */
+.marginal-text {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+  transform-origin: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.3em;
+  color: var(--bg-border-light);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.marginal-left { left: var(--sp-2); }
+.marginal-right { right: var(--sp-2); transform: translateY(-50%) rotate(90deg); }
+
+/* ------------------------------------------------
+   EQUIPMENT LIST / CARD
+   ------------------------------------------------ */
+.equipment-card-artistic {
+  background: transparent;
+  position: relative;
+  display: block;
+}
+
+.equipment-image-wrapper {
+  width: 100%;
+  aspect-ratio: 3/4;
+  clip-path: ellipse(45% 50% at 50% 50%); /* Spotlight pill shape */
+  background: var(--bg-surface);
+  position: relative;
+  transition: transform 0.6s var(--ease-out);
+}
+.equipment-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+  transition: opacity 0.4s var(--ease);
+}
+
+.equipment-card-artistic:hover .equipment-image-wrapper {
+  transform: scale(1.02);
+}
+.equipment-card-artistic:hover .equipment-image-wrapper img {
+  opacity: 1;
+}
+
+/* Overlay Pricing Gold Box */
+.price-badge {
+  position: absolute;
+  bottom: var(--sp-4);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-warm);
+  padding: var(--sp-1) var(--sp-3);
+  font-family: var(--font-mono);
+  color: var(--accent-warm);
+  font-size: 0.85rem;
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-gold);
+}
+
+.equipment-details {
+  text-align: center;
+  padding: var(--sp-3) 0;
+}
+.equipment-details h3 {
+  font-family: var(--font-serif);
+  font-size: 1.35rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.equipment-details .category {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* ------------------------------------------------
+   EQUIPMENT DETAIL VIEW (Pipeline Engine)
+   ------------------------------------------------ */
+.detail-hero {
+  display: flex;
+  gap: var(--sp-6);
+  margin-bottom: var(--sp-8);
+}
+
+.detail-spotlight {
+  flex: 1;
+  aspect-ratio: 1/1;
+  clip-path: ellipse(48% 48% at 50% 50%);
+  background: var(--bg-surface);
+  box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+}
+
+.detail-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pricing-pipeline-visualizer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-elevated);
+  padding: var(--sp-3);
+  border-left: 2px solid var(--accent-warm);
+  margin: var(--sp-4) 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.pipe-node {
+  text-align: center;
+  color: var(--text-secondary);
+}
+.pipe-node span.val {
+  display: block;
+  font-size: 1.1rem;
+  color: var(--accent-warm);
+}
+.pipe-arrow {
+  color: var(--accent);
+}
+
+/* ------------------------------------------------
+   BOOKING WIZARD STEPS
+   ------------------------------------------------ */
+.stepper-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--sp-6);
+  position: relative;
+}
+.stepper-nav::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 1px;
+  background: var(--bg-border);
+  z-index: 0;
+}
+.step-item {
+  background: var(--bg-base);
+  padding: 0 var(--sp-2);
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.step-item.active {
+  color: var(--text-primary);
+}
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem;
+}
+.step-item.active .step-num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg-base);
+  box-shadow: var(--shadow-glow);
+}

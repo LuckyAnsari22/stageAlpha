@@ -1,0 +1,80 @@
+<div class="hero-section">
+  <!-- THEATRICAL GHOST TEXT & POSTER MARGINS -->
+  <div class="ghost-text">STAGEALPHA</div>
+  <div class="marginal-text marginal-left">Awwwards 2026 Nominee</div>
+  <div class="marginal-text marginal-right">Dynamically Priced Inventory</div>
+
+  <div class="hero-content reveal">
+    <h1 class="font-display">Professional<br>Event Equipment</h1>
+    <div class="hero-divider"></div>
+    <p>Dynamic pricing algorithms. Built on Postgres. Powered by Lerner.</p>
+    
+    <div class="flex flex-center gap-3 mt-4" ng-hide="loadingStats || loadingEq">
+      <a href="#!/equipment" class="btn btn-primary">Enter Catalog</a>
+      <a href="#!/booking" class="btn btn-gold" ng-show="isLoggedIn">Reserve Stage</a>
+    </div>
+
+    <!-- ERROR STATE FALLBACK -->
+    <div class="p-4 mt-4 card" style="background: rgba(196,18,48,0.05); border-left-color: var(--danger);" ng-show="error">
+       <span class="label text-danger">[ OPERATIONAL FAILURE ]</span>
+       <p class="text-secondary mt-1">Network link or database transceiver failed. Retry procedure.</p>
+       <button class="btn btn-outline btn-sm mt-2" onclick="location.reload()">[ RETRY UPLINK ]</button>
+    </div>
+
+    <!-- LOADING STATE SKELETON -->
+    <div class="flex flex-center mt-5" ng-show="loadingStats || loadingEq">
+       <div class="spinner"></div>
+       <span class="label text-muted ml-2">Synchronizing Matrices...</span>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN STATS (If Admin) -->
+<section ng-show="isAdmin" class="container mb-5 reveal">
+  <div class="flex-between mb-3 border-bottom pb-2">
+    <h3 class="font-serif text-accent">Operations Desk</h3>
+    <a href="#!/admin" class="btn btn-outline">Command Center</a>
+  </div>
+  
+  <div class="grid grid-cols-4">
+    <div class="card">
+      <div class="label mb-1">Today's Ops</div>
+      <div class="font-mono text-gold" style="font-size: 2rem;">{{stats.today_bookings || 0}}</div>
+    </div>
+    <div class="card">
+      <div class="label mb-1">Gross Yield</div>
+      <div class="font-mono text-success" style="font-size: 2rem;">&#x20B9;{{stats.month_revenue | number:0}}</div>
+    </div>
+    <div class="card" ng-class="{'border-accent': stats.pending_bookings > 0}">
+      <div class="label mb-1">Pending</div>
+      <div class="font-mono text-warning" style="font-size: 2rem;">{{stats.pending_bookings || 0}}</div>
+    </div>
+    <div class="card">
+      <div class="label mb-1">Low Stock Alerts</div>
+      <div class="font-mono text-danger" style="font-size: 2rem;">{{stats.low_stock_items || 0}}</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED EQUIPMENT (Spotlight Presentation) -->
+<section class="container pb-5" ng-hide="loadingEq">
+  <div class="flex-between mb-4">
+    <h2 class="font-display">Featured Inventory</h2>
+    <a href="#!/equipment" class="label text-accent">View Complete Manifest &rarr;</a>
+  </div>
+
+  <div class="grid grid-cols-4">
+    <a href="#!/equipment/{{eq.id}}" class="equipment-card-artistic reveal" ng-repeat="eq in featuredEquipment">
+      <div class="equipment-image-wrapper">
+        <img ng-src="https://picsum.photos/400/600?random={{eq.id}}" alt="{{eq.name}}">
+        <div class="price-badge">&#x20B9;{{eq.current_price}}</div>
+      </div>
+      <div class="equipment-details">
+        <div class="category">{{eq.category_name}}</div>
+        <h3>{{eq.name}}</h3>
+        <span class="label text-success" ng-show="eq.stock_qty > 0">Available ({{eq.stock_qty}})</span>
+        <span class="label text-danger" ng-show="eq.stock_qty <= 0">Out of Stock</span>
+      </div>
+    </a>
+  </div>
+</section>

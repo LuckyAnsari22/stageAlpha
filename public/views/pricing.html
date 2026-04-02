@@ -1,0 +1,47 @@
+<div class="main-content container mt-4">
+  <div class="flex-between mb-4 border-bottom pb-2 reveal">
+    <h1 class="font-display text-accent">Yield Variation Logs</h1>
+    <a href="#!/admin" class="label text-muted">&larr; Return to Command Center</a>
+  </div>
+
+  <p class="font-mono text-secondary mb-4 reveal">
+    Inspect historical executions of the pricing algorithm across all assets.
+  </p>
+
+  <div class="card reveal">
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Timestamp (T)</th>
+            <th>Operation ID</th>
+            <th>Asset Designation</th>
+            <th>T-Zero Bound</th>
+            <th class="text-right">Static Base</th>
+            <th class="text-right">Algorithm Yield</th>
+            <th class="text-right">Variance (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="log in logs">
+            <td class="font-mono"><small>{{log.calculated_at | date:'yyyy-MM-dd HH:mm'}}</small></td>
+            <td class="font-mono text-muted">[{{log.booking_id}}]</td>
+            <td class="font-serif">{{log.equipment_name}}</td>
+            <td class="font-mono">{{log.event_date | date:'yyyy-MM-dd'}}</td>
+            <td class="text-right font-mono text-muted">&#x20B9;{{log.base_price}}</td>
+            <td class="text-right font-mono text-gold">&#x20B9;{{log.final_price}}</td>
+            <td class="text-right font-mono">
+              <!-- Inline calculation of surge percentage -->
+              <span ng-class="{'text-warning': (log.final_price - log.base_price)>0, 'text-success': (log.final_price - log.base_price)<0}">
+                {{ (((log.final_price - log.base_price) / log.base_price) * 100) | number:1 }}%
+              </span>
+            </td>
+          </tr>
+          <tr ng-if="logs.length === 0">
+            <td colspan="7" class="text-center font-mono py-4 text-muted">[ NO YIELD VARIATIONS LOGGED ]</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

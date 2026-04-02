@@ -1,0 +1,40 @@
+<div class="hero-section" style="min-height: 80vh;">
+  <div class="ghost-text">AUTHORIZE</div>
+  
+  <div class="card reveal" style="width: 100%; max-width: 440px; z-index: 10; padding: var(--sp-5);">
+    <h1 class="font-display mb-1 text-center">System Authorization</h1>
+    <p class="text-secondary mb-4 text-center">Identify your operational credentials.</p>
+
+    <div class="alert alert-danger mb-3" ng-show="error">
+      [ ERR ] {{error}}
+    </div>
+
+    <form name="loginForm" ng-submit="login()" novalidate>
+      <div class="form-group">
+        <label class="form-label">Network Email</label>
+        <input type="email" class="form-control" name="email" ng-model="credentials.email" required 
+               placeholder="operative@stagealpha.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label flex-between">
+          <span>Security Key</span>
+          <span class="text-accent pointer" ng-click="showPassword = !showPassword" style="cursor:none;">
+            [{{showPassword ? 'HIDE' : 'REVEAL'}}]
+          </span>
+        </label>
+        <input type="{{showPassword ? 'text' : 'password'}}" class="form-control" name="password" 
+               ng-model="credentials.password" required placeholder="••••••••">
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-4" ng-disabled="loginForm.$invalid || submitting">
+        {{submitting ? '[ AUTHENTICATING... ]' : 'ESTABLISH UPLINK'}}
+      </button>
+    </form>
+
+    <div class="divider mt-4"></div>
+    <div class="text-center font-mono" style="font-size: 0.8rem;">
+      <span class="text-muted">Unregistered asset?</span> <a href="#!/register" class="text-gold">Initialize Object</a>
+    </div>
+  </div>
+</div>

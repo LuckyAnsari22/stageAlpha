@@ -1,0 +1,118 @@
+/* ================================================
+   LAYOUT.CSS — Grids, Positioning, Framing
+   ================================================ */
+
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------
+   NAVIGATION BAR (Minimal Monospace + Line Hover)
+   ------------------------------------------------ */
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--navbar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--sp-5);
+  z-index: 1000;
+  background: linear-gradient(to bottom, rgba(13, 10, 10, 0.9) 0%, rgba(13, 10, 10, 0) 100%);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid transparent;
+  transition: background 0.3s, border-bottom 0.3s;
+}
+
+.navbar.scrolled {
+  background: rgba(13, 10, 10, 0.85);
+  border-bottom: 1px solid var(--bg-border);
+}
+
+.navbar-brand {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+.navbar-brand span { color: var(--accent); }
+
+.navbar-nav {
+  display: flex;
+  gap: var(--sp-5);
+  list-style: none;
+}
+
+.navbar-link {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  position: relative;
+  transition: color var(--dur) var(--ease);
+}
+.navbar-link:hover, .navbar-link.active {
+  color: var(--text-primary);
+}
+
+/* Crimson Underline Effect */
+.navbar-link::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0;
+  width: 0; height: 1px;
+  background: var(--accent);
+  transition: width 0.3s var(--ease-out);
+}
+.navbar-link:hover::after, .navbar-link.active::after { width: 100%; }
+
+/* ------------------------------------------------
+   THEATRICAL FRAMING (Pill / Oval Containers)
+   ------------------------------------------------ */
+.stage-oval {
+  clip-path: ellipse(48% 50% at 50% 50%);
+  overflow: hidden;
+  position: relative;
+}
+.stage-oval img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s var(--ease-out);
+}
+.stage-oval:hover img {
+  transform: scale(1.05);
+}
+
+/* ------------------------------------------------
+   GRIDS
+   ------------------------------------------------ */
+.grid { display: grid; gap: var(--sp-4); }
+
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid-cols-sidebar { grid-template-columns: 280px 1fr; }
+
+@media (max-width: 1024px) {
+  .grid-cols-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-cols-sidebar { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-3, .grid-cols-2 { grid-template-columns: 1fr; }
+  .navbar-nav { display: none; /* Add hamburger for production */ }
+}
+
+/* ------------------------------------------------
+   PAGE WRAPPER
+   ------------------------------------------------ */
+.main-content {
+  flex: 1;
+  padding-top: calc(var(--navbar-height) + var(--sp-6));
+  padding-bottom: var(--sp-8);
+}

@@ -1,0 +1,415 @@
+<!-- 
+  EQUIPMENT-DETAIL.HTML - ANG-03 Template Part 2
+  
+  Display single equipment with:
+  - Full description and specs
+  - Interactive date picker
+  - Real-time optimal price calculation
+  - Price breakdown waterfall (base → elasticity → seasonality → final)
+  - Confidence level indicator
+  - Price history chart
+  - Add to cart with quantity selector
+-->
+
+<div class="equipment-detail" ng-controller="EquipmentDetailController">
+
+  <!-- PAGE HEADER WITH BREADCRUMB -->
+  <div style="margin-bottom: var(--space-4);">
+    <a href="#!/equipment" class="link">← Back to Equipment</a>
+  </div>
+
+  <!-- MAIN CONTENT GRID: 2 columns on desktop, 1 on mobile -->
+  <div class="detail-container" style="
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  ">
+
+    <!-- ===== LEFT COLUMN: Image & Basic Info ===== -->
+    <div class="detail-left">
+
+      <!-- Equipment Image (placeholder) -->
+      <div class="image-container card" style="
+        width: 100%;
+        aspect-ratio: 1;
+        background: linear-gradient(135deg, var(--sa-accent) 0%, var(--sa-accent-dark) 100%);
+        border-radius: var(--radius-lg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 5rem;
+        color: white;
+        margin-bottom: var(--space-3);
+        position: relative;
+      ">
+        📦
+
+        <!-- Availability Badge -->
+        <span 
+          class="badge"
+          ng-class="{
+            'badge-success': equipment.stock_qty > 10,
+            'badge-warning': equipment.stock_qty > 0 && equipment.stock_qty <= 10,
+            'badge-danger': equipment.stock_qty === 0
+          }"
+          style="position: absolute; top: var(--space-2); right: var(--space-2);"
+        >
+          {{ equipment.stock_qty > 0 ? equipment.stock_qty + ' in stock' : 'Out of stock' }}
+        </span>
+      </div>
+
+      <!-- Equipment Name & Category -->
+      <h1 class="heading-lg" style="margin-bottom: 8px;">
+        {{ equipment.name }}
+      </h1>
+
+      <p class="body-md text-muted" style="margin-bottom: var(--space-2);">
+        <span class="badge badge-muted">{{ equipment.category_name }}</span>
+      </p>
+
+      <!-- Base Price -->
+      <div class="price-box card" style="
+        background: var(--sa-bg-surface);
+        border: 1px solid var(--sa-border);
+        padding: var(--space-3);
+        border-radius: var(--radius-lg);
+        margin-bottom: var(--space-3);
+      ">
+        <p class="label text-muted">Base Rate (Standard Price)</p>
+        <p class="display-md" style="color: var(--sa-accent);">
+          ₹{{ equipment.base_price | number:0 }}
+        </p>
+      </div>
+
+      <!-- Description -->
+      <div style="margin-bottom: var(--space-3);">
+        <h3 class="heading-sm" style="margin-bottom: 8px;">Description</h3>
+        <p class="body-md">{{ equipment.description }}</p>
+      </div>
+
+      <!-- Specifications (if available) -->
+      <div ng-show="equipment.specifications" style="margin-bottom: var(--space-3);">
+        <h3 class="heading-sm" style="margin-bottom: 8px;">Specifications</h3>
+        <ul class="body-sm" style="padding-left: var(--space-3);">
+          <li ng-repeat="spec in equipment.specifications">{{spec}}</li>
+        </ul>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats card" style="
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2);
+        padding: var(--space-2);
+        background: var(--sa-bg-surface);
+        border-radius: var(--radius-lg);
+      ">
+        <div>
+          <p class="label text-muted">Total Bookings</p>
+          <p class="heading-sm">{{ equipment.bookings_count || 0 }}</p>
+        </div>
+        <div>
+          <p class="label text-muted">Available Stock</p>
+          <p class="heading-sm">{{ equipment.stock_qty }}</p>
+        </div>
+      </div>
+
+    </div>
+    <!-- End left column -->
+
+    <!-- ===== RIGHT COLUMN: Booking & Pricing ===== -->
+    <div class="detail-right">
+
+      <!-- BOOKING FORM -->
+      <div class="booking-form card" style="
+        padding: var(--space-4);
+        background: var(--sa-bg-surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--sa-border);
+      ">
+
+        <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+          Booking Information
+        </h2>
+
+        <!-- Event Date Picker -->
+        <div class="form-group">
+          <label class="form-label">Event Date <span class="text-danger">*</span></label>
+          <input 
+            type="date"
+            ng-model="selectedDate"
+            ng-attr-min="{{minDate}}"
+            class="form-input"
+            placeholder="Select event date"
+          />
+          <p class="body-xs text-muted" style="margin-top: 6px;">
+            Bookings must be at least 1 day in advance
+          </p>
+        </div>
+
+        <!-- DYNAMIC PRICING SECTION (appears when date selected) -->
+        <div ng-show="selectedDate" style="
+          padding: var(--space-3);
+          background: rgba(76, 175, 80, 0.05);
+          border: 1px solid var(--sa-accent);
+          border-radius: var(--radius-md);
+          margin-bottom: var(--space-3);
+        ">
+
+          <!-- Loading indicator -->
+          <div ng-show="pricingLoading" style="text-align: center; padding: var(--space-2);">
+            <p class="body-sm text-muted">Calculating optimal price...</p>
+          </div>
+
+          <!-- Price Breakdown Waterfall -->
+          <div ng-show="!pricingLoading && priceCalc" class="price-breakdown">
+
+            <h3 class="heading-sm" style="margin-bottom: var(--space-2);">
+              Price Calculation
+            </h3>
+
+            <!-- Waterfall steps: Base → Elasticity → Seasonality → Final -->
+            <div class="waterfall" style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            ">
+
+              <!-- Step 1: Base Price -->
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 8px;
+                background: var(--sa-bg-elevated);
+                border-radius: var(--radius-md);
+              ">
+                <span class="body-sm">
+                  <strong>Base Price</strong>
+                  <span class="text-muted" style="display: block; font-size: 0.75rem;">Standard rate</span>
+                </span>
+                <span class="body-sm">₹{{ priceCalc.base_price | number:0 }}</span>
+              </div>
+
+              <!-- Arrow -->
+              <div style="text-align: center; color: var(--sa-accent);">↓</div>
+
+              <!-- Step 2: Elasticity Adjustment -->
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 8px;
+                background: var(--sa-bg-elevated);
+                border-radius: var(--radius-md);
+              ">
+                <span class="body-sm">
+                  <strong>Demand Elasticity</strong>
+                  <span class="text-muted" style="display: block; font-size: 0.75rem;">ε = {{ priceCalc.elasticity_coeff | number:2 }}</span>
+                </span>
+                <span class="body-sm text-accent">{{ getPriceUplift() }}</span>
+              </div>
+
+              <!-- Arrow -->
+              <div style="text-align: center; color: var(--sa-accent);">↓</div>
+
+              <!-- Step 3: Seasonality Adjustment -->
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: 8px;
+                background: var(--sa-bg-elevated);
+                border-radius: var(--radius-md);
+              ">
+                <span class="body-sm">
+                  <strong>Seasonality Factor</strong>
+                  <span class="text-muted" style="display: block; font-size: 0.75rem;">Date: {{ selectedDate }}</span>
+                </span>
+                <span class="body-sm">Included</span>
+              </div>
+
+              <!-- Arrow -->
+              <div style="text-align: center; color: var(--sa-accent); font-weight: 600;">↓</div>
+
+              <!-- FINAL PRICE (highlighted) -->
+              <div style="
+                display: flex;
+                justify-content: space-between;
+                padding: var(--space-2);
+                background: var(--sa-accent);
+                color: white;
+                border-radius: var(--radius-md);
+                font-weight: 600;
+              ">
+                <span>Algorithm Price</span>
+                <span class="display-sm">₹{{ priceCalc.optimal_price | number:0 }}</span>
+              </div>
+
+            </div>
+            <!-- End waterfall -->
+
+            <!-- Confidence Indicator -->
+            <div style="
+              margin-top: var(--space-2);
+              padding: var(--space-2);
+              background: rgba(255, 255, 255, 0.02);
+              border-radius: var(--radius-md);
+              display: flex;
+              align-items: center;
+              gap: var(--space-1);
+            ">
+              <span 
+                class="badge"
+                ng-class="getConfidenceClass(priceCalc.r_squared)"
+                title="Data quality indicator for this price estimate"
+              >
+                {{ priceCalc.confidence_level }}
+              </span>
+              <span class="body-xs text-muted">
+                {{ getConfidenceText(priceCalc) }}
+              </span>
+            </div>
+
+          </div>
+          <!-- End price breakdown -->
+
+        </div>
+        <!-- End dynamic pricing section -->
+
+        <!-- Quantity Selector -->
+        <div class="form-group">
+          <label class="form-label">Quantity</label>
+          <input 
+            type="number"
+            ng-model="cartQty"
+            min="1"
+            ng-attr-max="{{equipment.stock_qty}}"
+            class="form-input"
+          />
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: var(--space-2); flex-direction: column;">
+          <button 
+            class="btn btn-primary"
+            ng-click="addToCart()"
+            ng-disabled="!selectedDate || equipment.stock_qty === 0"
+          >
+            Add {{ cartQty }} to Cart
+          </button>
+          <button class="btn btn-outline" ng-click="continueShopping()">
+            Continue Shopping
+          </button>
+        </div>
+
+      </div>
+      <!-- End booking form -->
+
+    </div>
+    <!-- End right column -->
+
+  </div>
+  <!-- End main grid -->
+
+  <!-- ===== PRICE HISTORY CHART ===== -->
+  <div class="price-history card" style="
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    background: var(--sa-bg-surface);
+    border-radius: var(--radius-lg);
+  " ng-show="priceHistory.length > 0">
+
+    <h2 class="heading-md" style="margin-bottom: var(--space-3);">
+      Price History
+    </h2>
+
+    <!-- Chart.js canvas (needs to be rendered by app or replaced with ng-chart directive) -->
+    <div style="
+      position: relative;
+      height: 300px;
+      margin-bottom: var(--space-3);
+      background: var(--sa-bg-elevated);
+      border-radius: var(--radius-md);
+      padding: var(--space-2);
+    " ng-show="chartConfig">
+      <!-- Placeholder: In production, use angular-chart.js directive -->
+      <p class="body-sm text-muted" style="text-align: center; padding: var(--space-4);">
+        [Price History Chart - Render Last 30 Days]
+      </p>
+    </div>
+
+    <!-- Price changes table -->
+    <table class="sa-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Old Price</th>
+          <th>New Price</th>
+          <th>Change</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="record in priceHistory slice:0:10">
+          <td class="body-sm">{{ record.changed_at | date:'MMM dd, yyyy' }}</td>
+          <td class="body-sm">₹{{ record.old_price | number:0 }}</td>
+          <td class="body-sm">₹{{ record.new_price | number:0 }}</td>
+          <td class="body-sm">
+            <span ng-show="record.new_price > record.old_price" class="text-danger">
+              +₹{{ (record.new_price - record.old_price) | number:0 }}
+            </span>
+            <span ng-show="record.new_price < record.old_price" class="text-success">
+              -₹{{ (record.old_price - record.new_price) | number:0 }}
+            </span>
+            <span ng-show="record.new_price === record.old_price" class="text-muted">
+              No change
+            </span>
+          </td>
+          <td class="body-sm">{{ record.change_reason }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+  <!-- End price history -->
+
+  <!-- RELATED/SIMILAR PRODUCTS (optional) -->
+  <div class="related-products" ng-hide="true">
+    <!-- Could implement "You might also like" suggestions here -->
+  </div>
+
+</div>
+<!-- End equipment-detail -->
+
+<style>
+  .detail-container {
+    animation: fadeIn 0.4s var(--ease);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .price-box {
+    text-align: center;
+  }
+
+  .waterfall > div {
+    transition: all var(--duration) var(--ease);
+  }
+
+  .waterfall > div:hover {
+    transform: translateX(4px);
+  }
+
+  @media (max-width: 768px) {
+    .detail-container {
+      grid-template-columns: 1fr;
+    }
+
+    .image-container {
+      aspect-ratio: auto;
+      height: 300px;
+    }
+  }
+</style>

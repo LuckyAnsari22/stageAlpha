@@ -1,0 +1,88 @@
+<div class="main-content container mt-4">
+  <div class="flex-between mb-4 border-bottom pb-2">
+    <h1 class="font-display">Equipment Manifest</h1>
+    <div class="label text-gold">{{totalItems || 0}} Items Detected</div>
+  </div>
+
+  <div class="grid grid-cols-sidebar">
+    <!-- FILTERS SIDEBAR -->
+    <aside class="sidebar p-3 card reveal-left" style="align-self: start; top: 80px; position: sticky;">
+      <h4 class="font-serif text-accent mb-3">Refine Search</h4>
+      
+      <div class="form-group">
+        <label class="form-label">Search Query</label>
+        <input type="text" class="form-control" ng-model="filters.search" ng-change="applyFilters()" placeholder="_enter text...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Classification</label>
+        <select class="form-control" ng-model="filters.category_id" ng-change="applyFilters()">
+          <option value="">All Categories</option>
+          <option ng-repeat="cat in categories" ng-value="cat.id">{{cat.name}}</option>
+        </select>
+      </div>
+
+      <div class="form-group mt-3 flex-between">
+        <label class="form-label" style="margin:0;">In-Stock Only</label>
+        <input type="checkbox" ng-model="filters.available_only" ng-change="applyFilters()">
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="form-group">
+        <label class="form-label">Sort Algorithm</label>
+        <select class="form-control" ng-model="sort" ng-change="applyFilters()">
+          <option value="name">Alpha Designation (A-Z)</option>
+          <option value="-current_price">Yield (High to Low)</option>
+          <option value="current_price">Yield (Low to High)</option>
+        </select>
+      </div>
+    </aside>
+
+    <!-- CATALOG GRID -->
+    <div>
+      <!-- Empty State -->
+      <div class="empty-state reveal" ng-show="filtered.length === 0 && !loading">
+        <h3 class="font-serif">Zero Matches Found</h3>
+        <p>The operational query yielded no results. Adjust parameters.</p>
+        <button class="btn btn-outline mt-3" ng-click="filters={search:'', category_id:'', available_only:false}; applyFilters()">Reset Matrix</button>
+      </div>
+
+      <div class="grid grid-cols-3">
+        <!-- ITEM LOOP -->
+        <div class="equipment-card-artistic reveal" ng-repeat="item in paginatedItems()">
+          <a href="#!/equipment/{{item.id}}" class="equipment-image-wrapper">
+            <img ng-src="https://picsum.photos/400/600?random={{item.id}}" alt="{{item.name}}">
+            <div class="price-badge">&#x20B9;{{item.current_price}}</div>
+          </a>
+          <div class="equipment-details">
+            <div class="category">{{item.category_name}}</div>
+            <h3>{{item.name}}</h3>
+            
+            <div class="flex flex-center gap-2 mt-2">
+              <span class="badge badge-success" ng-show="item.stock_qty > 0">Stock: {{item.stock_qty}}</span>
+              <span class="badge badge-danger" ng-show="item.stock_qty <= 0">Depleted</span>
+              
+              <span class="badge badge-gold" ng-if="priceUplift(item) > 0">
+                Surge: +{{priceUplift(item)}}%
+              </span>
+            </div>
+
+            <button class="btn btn-outline w-full mt-3" 
+                    ng-click="addToCart(item)" 
+                    ng-disabled="item.stock_qty <= 0 || isInCart(item.id)">
+              {{isInCart(item.id) ? 'QUEUED' : 'ADD TO MANIFEST'}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGINATION -->
+      <div class="flex flex-center gap-2 mt-5 reveal" ng-show="totalPages() > 1">
+        <button class="btn btn-outline" ng-disabled="page === 1" ng-click="page = page - 1">[ PREV ]</button>
+        <span class="font-mono text-muted">Pg. {{page}} of {{totalPages()}}</span>
+        <button class="btn btn-outline" ng-disabled="page === totalPages()" ng-click="page = page + 1">[ NEXT ]</button>
+      </div>
+    </div>
+  </div>
+</div>

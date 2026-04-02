@@ -1,0 +1,790 @@
+<!-- 
+  BACKTEST DASHBOARD VIEW
+  
+  Layout:
+  - Date range selector
+  - Run button
+  - Real-time progress bar
+  - Results tabs (Headline, Charts, Tables)
+  - Headline: Algorithm revenue vs actual, improvement %
+  - Charts: Revenue comparison, equipment breakdown
+  - Tables: Top uplift and conservative pricing bookings
+  
+  Pattern: Three-tab results interface with real-time progress
+-->
+
+<div ng-controller="BacktestController" class="backtest-dashboard">
+  <!-- HEADER -->
+  <div class="dashboard-header">
+    <h1 class="heading-lg">Backtest Dashboard</h1>
+    <p class="label-md text-muted">Prove your algorithm's revenue impact</p>
+  </div>
+
+  <!-- ERROR MESSAGE -->
+  <div ng-if="state.error" class="alert alert-danger">
+    {{ state.error }}
+    <button class="btn-close" ng-click="state.error = null">×</button>
+  </div>
+
+  <!-- ===== BACKTEST CONTROL SECTION ===== -->
+  <section class="control-section">
+    <div class="control-card">
+      <h2 class="section-title">Run Historical Backtest</h2>
+      
+      <div class="control-form">
+        <div class="form-group">
+          <label class="form-label">Period Start</label>
+          <input type="date" 
+                 class="form-input"
+                 ng-model="form.startDate"
+                 ng-disabled="state.running">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Period End</label>
+          <input type="date" 
+                 class="form-input"
+                 ng-model="form.endDate"
+                 ng-disabled="state.running">
+        </div>
+
+        <button class="btn btn-primary"
+                ng-click="runBacktest()"
+                ng-disabled="state.running"
+                style="align-self: flex-end;">
+          {{ state.running ? 'Running...' : 'Run Backtest' }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PROGRESS SECTION ===== -->
+  <section ng-if="state.running" class="progress-section">
+    <div class="progress-card">
+      <div class="progress-header">
+        <span class="progress-title">{{ progress.message }}</span>
+        <span class="progress-percentage">{{ progress.percentage }}%</span>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar" style="width: {{ progress.percentage }}%"></div>
+      </div>
+
+      <div ng-if="progress.currentBooking > 0" class="progress-detail">
+        Processing booking #{{ progress.currentBooking }}
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RESULTS SECTION ===== -->
+  <section ng-if="state.completed && results" class="results-section">
+    
+    <!-- TAB NAVIGATION -->
+    <div class="tabs-header">
+      <button class="tab-btn" 
+              ng-class="{ active: selectedTab === 'headline' }"
+              ng-click="selectTab('headline')">
+        📊 Headline
+      </button>
+      <button class="tab-btn"
+              ng-class="{ active: selectedTab === 'charts' }"
+              ng-click="selectTab('charts')">
+        📈 Charts
+      </button>
+      <button class="tab-btn"
+              ng-class="{ active: selectedTab === 'tables' }"
+              ng-click="selectTab('tables')">
+        📋 Tables
+      </button>
+      <button class="btn btn-outline btn-small" ng-click="newBacktest()">
+        ⟲ New Backtest
+      </button>
+    </div>
+
+    <!-- TAB 1: HEADLINE RESULTS -->
+    <div ng-if="selectedTab === 'headline'" class="tab-content">
+      <div class="headline-section">
+        <!-- MAIN RESULT: IMPROVEMENT -->
+        <div class="headline-card headline-primary">
+          <div class="headline-label">Algorithm Revenue Improvement</div>
+          <div class="headline-amount">
+            <span class="improvement-pct">{{ results.improvement_pct | number:2 }}%</span>
+            <span class="improvement-arrow">{{ results.improvement_pct >= 0 ? '↑' : '↓' }}</span>
+          </div>
+          <div class="headline-breakdown">
+            {{ ((results.algorithm_revenue - results.actual_revenue) > 0 ? '+₹' : '₹') }}{{ 
+              Math.abs(results.algorithm_revenue - results.actual_revenue) | indianCurrency 
+            }} additional revenue
+          </div>
+        </div>
+
+        <!-- COMPARISON CARDS -->
+        <div class="comparison-grid">
+          <div class="comparison-card">
+            <div class="card-label">Actual Revenue</div>
+            <div class="card-value">₹{{ results.actual_revenue | indianCurrency }}</div>
+            <div class="card-subtext">What was charged</div>
+          </div>
+
+          <div class="comparison-card">
+            <div class="card-label">Algorithm Revenue</div>
+            <div class="card-value">₹{{ results.algorithm_revenue | indianCurrency }}</div>
+            <div class="card-subtext">Would have earned</div>
+          </div>
+
+          <div class="comparison-card">
+            <div class="card-label">Bookings Analyzed</div>
+            <div class="card-value">{{ results.total_bookings }}</div>
+            <div class="card-subtext">{{ results.total_items }} items</div>
+          </div>
+
+          <div class="comparison-card">
+            <div class="card-label">Period</div>
+            <div class="card-value">{{ results.period_start | date:'MMM dd' }} — {{ results.period_end | date:'MMM dd, yyyy' }}</div>
+            <div class="card-subtext">Backtest period</div>
+          </div>
+        </div>
+
+        <!-- KEY INSIGHT -->
+        <div class="insight-box">
+          <strong>Key Finding:</strong> 
+          Over the backtest period, the StageAlpha algorithm would have generated
+          <strong>₹{{ (results.algorithm_revenue - results.actual_revenue) | indianCurrency }}</strong> 
+          in additional revenue, representing a 
+          <strong>{{ results.improvement_pct | number:1 }}%</strong> 
+          improvement over simple base pricing.
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: CHARTS -->
+    <div ng-if="selectedTab === 'charts'" class="tab-content">
+      <div class="charts-grid">
+        <!-- Revenue Comparison Chart -->
+        <div class="chart-card" ng-if="charts.revenue">
+          <canvas id="revenueChart" 
+                  class="chart"
+                  ng-chart="charts.revenue"></canvas>
+        </div>
+
+        <!-- Equipment Improvement Chart -->
+        <div class="chart-card" ng-if="charts.equipment">
+          <canvas id="equipmentChart" 
+                  class="chart"
+                  ng-chart="charts.equipment"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: DETAILED TABLES -->
+    <div ng-if="selectedTab === 'tables'" class="tab-content">
+      <!-- TABLE 1: Top Uplift Bookings -->
+      <div class="table-section">
+        <h3 class="section-title">Top 10: Highest Algorithm Uplift</h3>
+        <p class="section-subtitle">Bookings where algorithm pricing would have earned the most</p>
+
+        <div ng-if="results.top_uplift_bookings && results.top_uplift_bookings.length > 0" 
+             class="table-wrapper">
+          <table class="sa-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Customer</th>
+                <th>Event Date</th>
+                <th>Actual Revenue</th>
+                <th>Algorithm Revenue</th>
+                <th>Uplift %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="booking in results.top_uplift_bookings" class="table-row">
+                <td class="col-id">
+                  <span class="mono">#{{ booking.booking_id }}</span>
+                </td>
+                <td>{{ booking.customer_name }}</td>
+                <td>{{ booking.event_date | date:'MMM dd, yyyy' }}</td>
+                <td class="col-amount">₹{{ booking.actual_revenue | indianCurrency }}</td>
+                <td class="col-amount">₹{{ booking.algorithm_revenue | indianCurrency }}</td>
+                <td class="col-status">
+                  <span class="badge" ng-class="getUpliftClass(booking.uplift_pct)">
+                    +{{ booking.uplift_pct | number:1 }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div ng-if="!results.top_uplift_bookings || results.top_uplift_bookings.length === 0" 
+             class="empty-state">
+          No data
+        </div>
+      </div>
+
+      <!-- TABLE 2: Conservative Pricing (Algorithm suggests lower) -->
+      <div class="table-section">
+        <h3 class="section-title">Top 10: Conservative Pricing (Algorithm Suggests Lower)</h3>
+        <p class="section-subtitle">
+          Bookings where algorithm would have charged LESS. 
+          This proves the algorithm isn't just raising prices — it's data-driven.
+        </p>
+
+        <div ng-if="results.top_downward_bookings && results.top_downward_bookings.length > 0"
+             class="table-wrapper">
+          <table class="sa-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Customer</th>
+                <th>Event Date</th>
+                <th>Actual Revenue</th>
+                <th>Algorithm Revenue</th>
+                <th>Difference %</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="booking in results.top_downward_bookings" class="table-row">
+                <td class="col-id">
+                  <span class="mono">#{{ booking.booking_id }}</span>
+                </td>
+                <td>{{ booking.customer_name }}</td>
+                <td>{{ booking.event_date | date:'MMM dd, yyyy' }}</td>
+                <td class="col-amount">₹{{ booking.actual_revenue | indianCurrency }}</td>
+                <td class="col-amount">₹{{ booking.algorithm_revenue | indianCurrency }}</td>
+                <td class="col-status">
+                  <span class="badge badge-danger">
+                    {{ booking.uplift_pct | number:1 }}%
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div ng-if="!results.top_downward_bookings || results.top_downward_bookings.length === 0"
+             class="empty-state">
+          No conservative pricing examples (algorithm always suggests higher prices in this period)
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- EMPTY STATE -->
+  <section ng-if="state.idle && !state.running && !state.completed" class="empty-section">
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <p class="heading-md">No backtest results yet</p>
+      <p class="label-md text-muted">Select a date range and click "Run Backtest" to begin</p>
+    </div>
+  </section>
+
+</div>
+
+<style scoped>
+  /* BACKTEST DASHBOARD STYLES */
+
+  .backtest-dashboard {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  .dashboard-header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1.5rem;
+  }
+
+  .dashboard-header h1 {
+    margin-bottom: 0.25rem;
+  }
+
+  /* CONTROL SECTION */
+  .control-section {
+    margin-bottom: 2rem;
+  }
+
+  .control-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(108, 99, 255, 0.2);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .control-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .form-input {
+    padding: 0.75rem;
+    background: var(--sa-bg-elevated);
+    border: 1px solid rgba(108, 99, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.875rem;
+  }
+
+  .form-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* PROGRESS SECTION */
+  .progress-section {
+    margin-bottom: 2rem;
+  }
+
+  .progress-card {
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.1) 0%, rgba(108, 99, 255, 0.05) 100%);
+    border: 1px solid rgba(108, 99, 255, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .progress-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .progress-percentage {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #6c63ff;
+  }
+
+  .progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: rgba(108, 99, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #6c63ff, #8b85ff);
+    transition: width 0.3s ease;
+  }
+
+  .progress-detail {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  /* RESULTS SECTION */
+  .results-section {
+    margin-bottom: 2rem;
+  }
+
+  .tabs-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tab-btn:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .tab-btn.active {
+    color: #6c63ff;
+    border-bottom-color: #6c63ff;
+  }
+
+  .btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  .tab-content {
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* HEADLINE TAB */
+  .headline-section {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .headline-card {
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.15) 0%, rgba(108, 99, 255, 0.05) 100%);
+    border: 2px solid rgba(108, 99, 255, 0.4);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .headline-primary {
+    border: 2px solid #6c63ff;
+    background: linear-gradient(135deg, rgba(108, 99, 255, 0.2) 0%, rgba(108, 99, 255, 0.08) 100%);
+  }
+
+  .headline-label {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 1rem;
+  }
+
+  .headline-amount {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .improvement-pct {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #6c63ff;
+    font-family: 'Courier New', monospace;
+  }
+
+  .improvement-arrow {
+    font-size: 2rem;
+    color: #4caf50;
+    animation: bounce 1s infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .headline-breakdown {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .comparison-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(108, 99, 255, 0.2);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .card-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #6c63ff;
+    font-family: 'Courier New', monospace;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-subtext {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .insight-box {
+    background: rgba(108, 99, 255, 0.1);
+    border-left: 3px solid #6c63ff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  /* CHARTS TAB */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+  }
+
+  .chart-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(108, 99, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-height: 400px;
+  }
+
+  .chart {
+    width: 100% !important;
+    height: 350px !important;
+  }
+
+  /* TABLES TAB */
+  .table-section {
+    margin-bottom: 3rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+
+  .section-subtitle {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 1.5rem;
+  }
+
+  .table-wrapper {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(108, 99, 255, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .sa-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .sa-table thead {
+    background: rgba(108, 99, 255, 0.1);
+    border-bottom: 1px solid rgba(108, 99, 255, 0.3);
+  }
+
+  .sa-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+  }
+
+  .sa-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s;
+  }
+
+  .sa-table tbody tr:hover {
+    background-color: rgba(108, 99, 255, 0.05);
+  }
+
+  .sa-table td {
+    padding: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .col-id {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #6c63ff;
+  }
+
+  .col-amount {
+    text-align: right;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+  }
+
+  .col-status {
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-success {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4caf50;
+  }
+
+  .badge-danger {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #f44336;
+  }
+
+  .text-success { color: #4caf50; }
+  .text-info { color: #2196f3; }
+  .text-warning { color: #f59e0b; }
+  .text-danger { color: #f44336; }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-section {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px dashed rgba(108, 99, 255, 0.2);
+    border-radius: 12px;
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ALERTS */
+  .alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .alert-danger {
+    background-color: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    color: #f44336;
+  }
+
+  .btn-close {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1.5rem;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .backtest-dashboard {
+      padding: 1rem;
+    }
+
+    .control-form {
+      grid-template-columns: 1fr;
+    }
+
+    .tabs-header {
+      flex-direction: column;
+    }
+
+    .comparison-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .charts-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .improvement-pct {
+      font-size: 2rem;
+    }
+
+    .sa-table {
+      font-size: 0.75rem;
+    }
+
+    .sa-table th,
+    .sa-table td {
+      padding: 0.75rem;
+    }
+  }
+</style>
+
+<!--
+  BACKTEST DASHBOARD PATTERNS
+
+  1. CONTROL FLOW
+     - User enters date range, clicks "Run Backtest"
+     - POST /api/v1/backtest/run returns immediately with backtest_id
+     - Real-time progress updates via Socket.IO (backtest:progress events)
+     - Client binds progress to progress bar
+
+  2. THREE-TAB RESULTS INTERFACE
+     - Headline: Summary with main improvement metric, comparison cards
+     - Charts: Line chart (revenue by month), Bar chart (improvement by equipment)
+     - Tables: Top uplift bookings + conservative pricing examples
+
+  3. PROOF OF ALGORITHM
+     Two tables prove the algorithm is data-driven:
+     - Top uplift: Bookings where algorithm earns more
+     - Conservative: Bookings where algorithm suggests lower pricing
+     Together, they show algorithm isn't just chasing high prices
+
+  4. REAL-TIME UI BINDING
+     - ng-if switches between: idle → running → completed states
+     - Progress bar animated with CSS (width transition)
+     - Socket.IO events trigger $scope.$apply() for digest cycle
+
+  5. RESPONSIVE BREAKPOINTS
+     - Desktop: Multi-column grids
+     - Tablet: 2-column layout
+     - Mobile: Single column, stacked tabs
+
+  6. VISUAL HIERARCHY
+     - Large percentage improvement (3rem font)
+     - Color-coded badges (green >10%, blue 5-10%, amber 0-5%, red <0%)
+     - Insight box highlights key finding
+     - Empty state guides user to run backtest
+-->

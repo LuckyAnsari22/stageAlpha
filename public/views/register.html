@@ -1,0 +1,54 @@
+<div class="hero-section" style="min-height: 80vh;">
+  <div class="ghost-text">INITIALIZE</div>
+  
+  <div class="card reveal" style="width: 100%; max-width: 440px; z-index: 10; padding: var(--sp-5);">
+    <h1 class="font-display mb-1 text-center">Asset Initialization</h1>
+    <p class="text-secondary mb-4 text-center">Register into the logistics network.</p>
+
+    <div class="alert alert-danger mb-3" ng-show="error">
+      [ ERR ] {{error}}
+    </div>
+
+    <form name="regForm" ng-submit="register()" novalidate>
+      <div class="form-group">
+        <label class="form-label">Operative Designation</label>
+        <input type="text" class="form-control" name="name" ng-model="user.name" required 
+               placeholder="Company / Full Name">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Network Email</label>
+        <input type="email" class="form-control" name="email" ng-model="user.email" required 
+               placeholder="operative@stagealpha.com">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Secure Transceiver (Phone)</label>
+        <input type="tel" class="form-control" name="phone" ng-model="user.phone" required 
+               placeholder="+91 00000 00000">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Security Key</label>
+        <input type="password" class="form-control" name="password" ng-model="user.password" 
+               ng-change="checkStrength()" required placeholder="••••••••">
+        
+        <div class="mt-2 flex gap-1" ng-show="user.password" style="height: 4px;">
+          <div style="flex:1; border-radius:2px; transition:0.3s;" ng-style="{'background': pwdStrength >= 1 ? 'var(--danger)' : 'var(--bg-border)'}"></div>
+          <div style="flex:1; border-radius:2px; transition:0.3s;" ng-style="{'background': pwdStrength >= 2 ? 'var(--warning)' : 'var(--bg-border)'}"></div>
+          <div style="flex:1; border-radius:2px; transition:0.3s;" ng-style="{'background': pwdStrength >= 3 ? 'var(--success)' : 'var(--bg-border)'}"></div>
+          <div style="flex:1; border-radius:2px; transition:0.3s;" ng-style="{'background': pwdStrength == 4 ? 'var(--success)' : 'var(--bg-border)'}"></div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full mt-4" ng-disabled="regForm.$invalid || submitting || pwdStrength < 2">
+        {{submitting ? '[ REGISTERING... ]' : 'COMMENCE INSERTION'}}
+      </button>
+    </form>
+
+    <div class="divider mt-4"></div>
+    <div class="text-center font-mono" style="font-size: 0.8rem;">
+      <span class="text-muted">Existing operative?</span> <a href="#!/login" class="text-gold">Establish Uplink</a>
+    </div>
+  </div>
+</div>

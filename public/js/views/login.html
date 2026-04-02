@@ -1,0 +1,337 @@
+<!-- 
+  LOGIN.HTML
+  
+  Single centered card auth flow.
+  
+  Design philosophy:
+  - Minimal, focused: only the login form (no distractions)
+  - Centered card: max-width 420px on deep dark background
+  - Logo and tagline: reinforce brand identity
+  - Password field: show/hide toggle for user convenience
+  - Submit button: full-width, high contrast
+  - Fade-out on success: smooth transition before redirect
+  
+  Teaching goal:
+  Show how to build a professional auth form with proper UX patterns.
+-->
+
+<div class="auth-page" ng-controller="AuthController" ng-class="{'fading-out': fadingOut}">
+
+  <div class="auth-container">
+    
+    <!-- Card: centered, fixed width -->
+    <div class="auth-card">
+
+      <!-- ===================================================================
+           HEADER: Logo + Tagline
+           =================================================================== -->
+      <div class="auth-header">
+        <h1 class="auth-logo">
+          Stage<span class="auth-logo-accent">Alpha</span>
+        </h1>
+        <p class="auth-tagline">
+          Quantitative Revenue Optimization
+        </p>
+      </div>
+
+      <!-- ===================================================================
+           LOGIN FORM
+           
+           Two fields: email + password
+           Both required for submit button to enable.
+           Password field has show/hide toggle icon.
+           =================================================================== -->
+      <form class="auth-form" ng-submit="login()" novalidate>
+
+        <!-- Email field -->
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input
+            type="email"
+            ng-model="loginForm.email"
+            class="form-input"
+            placeholder="you@example.com"
+            required
+            autocomplete="email"
+          />
+        </div>
+
+        <!-- Password field with show/hide toggle -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label class="form-label">Password</label>
+            <!-- Show/hide toggle button -->
+            <button
+              type="button"
+              class="password-toggle"
+              ng-click="loginForm.showPassword = !loginForm.showPassword"
+              aria-label="Toggle password visibility"
+            >
+              <!-- Eye open icon: shown when password is hidden -->
+              <span ng-show="!loginForm.showPassword">👁️</span>
+              <!-- Eye closed icon: shown when password is visible -->
+              <span ng-show="loginForm.showPassword">👁️‍🗨️</span>
+            </button>
+          </div>
+
+          <!-- Input type changes based on showPassword state -->
+          <input
+            ng-attr-type="{{loginForm.showPassword ? 'text' : 'password'}}"
+            ng-model="loginForm.password"
+            class="form-input"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+          />
+        </div>
+
+        <!-- Submit button: full-width, disabled until form valid -->
+        <button
+          type="submit"
+          class="btn btn-primary btn-full"
+          ng-disabled="!isLoginFormValid()"
+        >
+          <span ng-show="!submitting">Sign In</span>
+          <span ng-show="submitting">Signing in...</span>
+        </button>
+
+      </form>
+
+      <!-- ===================================================================
+           FOOTER: Link to register if new user
+           =================================================================== -->
+      <div class="auth-footer">
+        <p class="body-sm text-muted">
+          Don't have an account?
+          <a href="#!/register" class="auth-link">Sign up here</a>
+        </p>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- =====================================================================
+     STYLING: Centered card, fade-out animation
+     ===================================================================== -->
+<style>
+  /**
+   * Auth page container: full viewport height, centered flex layout
+   */
+  .auth-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: var(--sa-bg-deep);
+    padding: var(--space-3);
+    transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /**
+   * Fade-out animation: before redirect
+   * Opacity transitions from 1 (visible) to 0 (invisible) over 500ms
+   * This gives user visual confirmation before page change
+   */
+  .auth-page.fading-out {
+    opacity: 0;
+  }
+
+  /**
+   * Auth container: the centered wrapper
+   * max-width: 420px is standard for auth forms (tight, focused)
+   * width: 100% ensures responsiveness on smaller screens
+   */
+  .auth-container {
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /**
+   * Auth card: the form container
+   * Background, border, padding per design system
+   * Shadow for visual elevation
+   */
+  .auth-card {
+    background: var(--sa-bg-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  /**
+   * Auth header: logo + tagline
+   * Centered, bottom margin to separate from form
+   */
+  .auth-header {
+    text-align: center;
+    margin-bottom: var(--space-5);
+  }
+
+  /**
+   * Logo: the "StageAlpha" text
+   * Large, bold, tech-forward font
+   * "Alpha" part highlighted in accent color
+   */
+  .auth-logo {
+    font: 800 1.75rem/1 var(--font-display);
+    color: var(--sa-text-primary);
+    margin: 0 0 var(--space-1) 0;
+    letter-spacing: -0.02em;
+  }
+
+  .auth-logo-accent {
+    color: var(--sa-accent);
+  }
+
+  /**
+   * Tagline: subtle subheading under logo
+   * Smaller, muted, explains product
+   */
+  .auth-tagline {
+    margin: 0;
+    font: 400 0.875rem/1.4 var(--font-body);
+    color: var(--sa-text-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /**
+   * Auth form: form element with spacing for fields
+   * Form fields stack vertically (column flex)
+   */
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  /**
+   * Form group: label + input container
+   * Maintains consistent spacing
+   */
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /**
+   * Form label
+   * Matches design system typography
+   */
+  .form-label {
+    font: 500 0.75rem var(--font-body);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sa-text-muted);
+    margin: 0;
+  }
+
+  /**
+   * Label row: label + password toggle button on same line
+   */
+  .form-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /**
+   * Password toggle button: show/hide icon
+   * Small, transparent, with hover effect
+   */
+  .password-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    color: var(--sa-text-muted);
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-toggle:hover {
+    color: var(--sa-accent);
+  }
+
+  /**
+   * Form input: text field styling
+   * Dark background, subtle border, focus state with accent color
+   */
+  .form-input {
+    background: var(--sa-bg-elevated);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    color: var(--sa-text-primary);
+    font: 400 0.9375rem var(--font-body);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .form-input:focus {
+    border-color: var(--sa-accent);
+    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
+  }
+
+  .form-input::placeholder {
+    color: var(--sa-text-dim);
+  }
+
+  /**
+   * Submit button: full-width, primary style
+   * High contrast, clickable, disabled state
+   */
+  .btn-full {
+    width: 100%;
+  }
+
+  /**
+   * Auth footer: sign up link
+   * Centered, below the form
+   */
+  .auth-footer {
+    text-align: center;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--sa-border);
+  }
+
+  /**
+   * Auth link: sign up / sign in link
+   * Accent color, hover effect
+   */
+  .auth-link {
+    color: var(--sa-accent);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+  }
+
+  .auth-link:hover {
+    color: #7d75ff;
+    text-decoration: underline;
+  }
+
+  /**
+   * Mobile responsive
+   */
+  @media (max-width: 480px) {
+    .auth-card {
+      padding: var(--space-4);
+    }
+
+    .auth-header {
+      margin-bottom: var(--space-4);
+    }
+
+    .auth-logo {
+      font-size: 1.5rem;
+    }
+  }
+</style>
