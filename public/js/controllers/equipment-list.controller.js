@@ -1,127 +1,100 @@
-angular.module('stageAlpha').controller('EquipmentListCtrl',
-['$scope', '$location', '$timeout', 'ApiService', 'CartService', 'SocketService', 'ToastService',
-function($scope, $location, $timeout, Api, Cart, Socket, Toast) {
+'use strict';
+angular.module('stageAlpha')
+.controller('EquipmentListCtrl', ['$scope', '$http', '$rootScope', 'CartService', 'ToastService',
+function($scope, $http, $rootScope, CartService, ToastService) {
   $scope.equipment = [];
-  $scope.filtered = [];
+  $scope.filteredEquipment = [];
   $scope.categories = [];
-  
-  $scope.filters = { search: '', category_id: '', available_only: false };
-  $scope.sort = 'name';
-  $scope.page = 1;
-  $scope.pageSize = 12;
-  
   $scope.loading = true;
-  $scope.error = null;
+  $scope.searchQuery = '';
+  $scope.selectedCategory = null;
+  $scope.sortBy = 'name';
+  $scope.sortDir = 'asc';
+  $scope.compareList = [];
 
-  function loadCategories() {
-    Api.get('/categories').then(function(res) {
-      $scope.categories = res.data.data;
+  var catMap = {
+    'PA Systems':      { icon: '🔊', cls: 'cat-sound' },
+    'DJ Equipment':    { icon: '🎧', cls: 'cat-dj' },
+    'Stage Lighting':  { icon: '💡', cls: 'cat-light' },
+    'Microphones':     { icon: '🎤', cls: 'cat-mic' },
+    'Cables & Stands': { icon: '🔌', cls: 'cat-cable' }
+  };
+
+  $scope.getCatClass = function(catName) { return (catMap[catName] || {}).cls || 'cat-default'; };
+  $scope.getCatIcon = function(catName) { return (catMap[catName] || {}).icon || '🎵'; };
+
+  // Load equipment
+  $http.get('/api/v1/equipment').then(function(res) {
+    $scope.equipment = res.data.data || res.data || [];
+    applyFilters();
+    $scope.loading = false;
+  }).catch(function() {
+    $scope.loading = false;
+  });
+
+  // Load categories
+  $http.get('/api/v1/categories').then(function(res) {
+    $scope.categories = res.data.data || res.data || [];
+  });
+
+  // Filtering
+  $scope.filterCategory = function(catName) {
+    $scope.selectedCategory = catName;
+    applyFilters();
+  };
+
+  $scope.sortEquipment = function(field) {
+    if ($scope.sortBy === field) {
+      $scope.sortDir = $scope.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      $scope.sortBy = field;
+      $scope.sortDir = 'asc';
+    }
+    applyFilters();
+  };
+
+  $scope.resetFilters = function() {
+    $scope.searchQuery = '';
+    $scope.selectedCategory = null;
+    $scope.sortBy = 'name';
+    $scope.sortDir = 'asc';
+    applyFilters();
+  };
+
+  $scope.$watch('searchQuery', function() { applyFilters(); });
+
+  function applyFilters() {
+    var result = $scope.equipment.slice();
+
+    // Category filter
+    if ($scope.selectedCategory) {
+      result = result.filter(function(eq) { return eq.category_name === $scope.selectedCategory; });
+    }
+
+    // Search filter
+    if ($scope.searchQuery) {
+      var q = $scope.searchQuery.toLowerCase();
+      result = result.filter(function(eq) {
+        return eq.name.toLowerCase().indexOf(q) > -1 ||
+               (eq.category_name && eq.category_name.toLowerCase().indexOf(q) > -1);
+      });
+    }
+
+    // Sorting
+    var dir = $scope.sortDir === 'asc' ? 1 : -1;
+    result.sort(function(a, b) {
+      var va = a[$scope.sortBy], vb = b[$scope.sortBy];
+      if (typeof va === 'string') return va.localeCompare(vb) * dir;
+      return (va - vb) * dir;
     });
+
+    $scope.filteredEquipment = result;
   }
 
-  $scope.loadEquipment = function() {
-    $scope.loading = true;
-    $scope.error = null;
-    Api.get('/equipment').then(function(res) {
-      $scope.equipment = res.data.data;
-      $scope.applyFilters();
-    }).catch(function(err) {
-      $scope.error = err.data?.message || 'Failed to fetch catalog';
-    }).finally(function() {
-      $scope.loading = false;
-    });
+  // Cart
+  $scope.addToCart = function(eq) {
+    CartService.add(eq);
+    $rootScope.$broadcast('cart:updated');
+    ToastService.show(eq.name + ' added to cart', 'success');
   };
-
-  $scope.applyFilters = function() {
-    var f = $scope.equipment;
-    // Search
-    if ($scope.filters.search) {
-      var s = $scope.filters.search.toLowerCase();
-      f = f.filter(function(e) { return e.name.toLowerCase().includes(s) || (e.description || '').toLowerCase().includes(s); });
-    }
-    // Category
-    if ($scope.filters.category_id) {
-      f = f.filter(function(e) { return e.category_id == $scope.filters.category_id; });
-    }
-    // Available
-    if ($scope.filters.available_only) {
-      f = f.filter(function(e) { return e.stock_qty > 0; });
-    }
-    // Sort
-    f.sort(function(a, b) {
-      if ($scope.sort === 'name') return a.name.localeCompare(b.name);
-      if ($scope.sort === 'price_asc') return a.current_price - b.current_price;
-      if ($scope.sort === 'price_desc') return b.current_price - a.current_price;
-      return 0;
-    });
-    $scope.filtered = f;
-    $scope.page = 1; // reset pagination
-  };
-
-  $scope.paginatedItems = function() {
-    var start = ($scope.page - 1) * $scope.pageSize;
-    return $scope.filtered.slice(start, start + $scope.pageSize);
-  };
-
-  $scope.totalPages = function() {
-    return Math.ceil($scope.filtered.length / $scope.pageSize) || 1;
-  };
-  
-  $scope.getPagesArray = function() {
-    return new Array($scope.totalPages());
-  };
-
-  $scope.addToCart = function(item) {
-    Cart.add(item, 1);
-    Toast.success(item.name + ' added to booking');
-  };
-
-  $scope.isInCart = function(id) {
-    return Cart.has(id);
-  };
-
-  $scope.goToDetail = function(id) {
-    $location.path('/equipment/' + id);
-  };
-
-  $scope.priceUplift = function(item) {
-    if (!item.base_price || item.base_price == 0) return 0;
-    return Math.round(((item.current_price - item.base_price) / item.base_price) * 100);
-  };
-
-  $scope.priceClass = function(item) {
-    var diff = $scope.priceUplift(item);
-    if (diff > 0) return 'badge-warning';
-    if (diff < 0) return 'badge-success';
-    return '';
-  };
-
-  // Debounced filter watcher
-  var filterTimer;
-  $scope.$watch('filters', function(nv, ov) {
-    if (nv === ov) return;
-    if (filterTimer) $timeout.cancel(filterTimer);
-    filterTimer = $timeout($scope.applyFilters, 300);
-  }, true);
-
-  $scope.$watch('sort', function(nv, ov) {
-    if (nv !== ov) $scope.applyFilters();
-  });
-
-  // Socket sync
-  Socket.on('inventory:updated', function(data) {
-    var eq = $scope.equipment.find(function(e) { return e.id === data.id; });
-    if (eq) {
-      eq.stock_qty = data.stock_qty;
-      $scope.applyFilters();
-    }
-  });
-
-  $scope.$on('$destroy', function() {
-    Socket.off('inventory:updated');
-  });
-
-  // Init
-  loadCategories();
-  $scope.loadEquipment();
 }]);

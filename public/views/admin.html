@@ -1,101 +1,167 @@
-<div class="main-content container mt-4">
-  <div class="flex-between border-bottom pb-2 mb-4 reveal">
-    <h1 class="font-display">Command Center</h1>
-    <div class="font-mono text-muted" style="font-size:0.8rem;">[ REFRESH_RATE: 60000ms ]</div>
-  </div>
-
-  <div class="grid grid-cols-4 mb-5 reveal">
-    <div class="card p-4">
-      <div class="label mb-1">Today's Operation Count</div>
-      <div class="font-mono text-gold" style="font-size: 2.2rem;">{{stats.today_bookings || 0}}</div>
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Admin Dashboard</h1>
+      <p class="page-sub">Operations overview and management console</p>
     </div>
-    <div class="card p-4">
-      <div class="label mb-1">Gross Yield</div>
-      <div class="font-mono text-success" style="font-size: 2.2rem;">&#x20B9;{{stats.month_revenue | number:0}}</div>
-    </div>
-    <div class="card p-4" ng-class="{'border-accent': stats.pending_bookings > 0}">
-      <div class="label mb-1">Pending Directives</div>
-      <div class="font-mono text-warning" style="font-size: 2.2rem;">{{stats.pending_bookings || 0}}</div>
-    </div>
-    <div class="card p-4">
-      <div class="label mb-1">Critical Stock Alerts</div>
-      <div class="font-mono text-danger" style="font-size: 2.2rem;">{{stats.low_stock_items || 0}}</div>
+    <div class="flex gap-2">
+      <span class="badge badge-brand">
+        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+        Live
+      </span>
     </div>
   </div>
 
-  <div class="grid grid-cols-2 mb-5">
-    <div class="card reveal-left">
-      <h3 class="font-serif text-accent mb-3">Yield Trajectory (6M)</h3>
-      <div style="height: 300px; width:100%;">
+  <!-- Admin Navigation Tabs -->
+  <div class="admin-tabs">
+    <a href="#!/admin" class="admin-tab active">Dashboard</a>
+    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
+    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
+    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
+    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
+    <a href="#!/admin/staff" class="admin-tab">Staff</a>
+    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value gradient-text">₹{{stats.total_revenue | number:0}}</div>
+      <div class="kpi-sub">All completed bookings</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Bookings</div>
+      <div class="kpi-value text-brand">{{stats.total_bookings || 0}}</div>
+      <div class="kpi-sub">{{stats.completed_bookings || 0}} completed</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Pending</div>
+      <div class="kpi-value text-warning">{{stats.pending_bookings || 0}}</div>
+      <div class="kpi-sub">Awaiting confirmation</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Customers</div>
+      <div class="kpi-value text-accent">{{stats.total_customers || 0}}</div>
+      <div class="kpi-sub">Registered users</div>
+    </div>
+  </div>
+
+  <!-- Revenue Chart + Recent Bookings -->
+  <div class="admin-overview-grid">
+    <!-- Revenue Chart -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="heading-sm">Monthly Revenue</span>
+        <span class="label">Last 12 months</span>
+      </div>
+      <div class="chart-body">
         <canvas id="revenueChart"></canvas>
       </div>
     </div>
-    
-    <div class="card reveal">
-      <h3 class="font-serif text-gold mb-3">Asset Performance</h3>
-      <div style="height: 300px; width:100%;">
-        <canvas id="equipmentChart"></canvas>
+
+    <!-- Quick Stats -->
+    <div style="display:flex; flex-direction:column; gap:1rem;">
+      <div class="card">
+        <div class="label mb-2">Avg. Booking Value</div>
+        <div class="heading-lg text-accent">₹{{stats.avg_booking_value | number:0}}</div>
+      </div>
+      <div class="card">
+        <div class="label mb-2">This Month Revenue</div>
+        <div class="heading-lg text-success">₹{{stats.month_revenue | number:0}}</div>
+      </div>
+      <div class="card">
+        <div class="label mb-2">Cancellation Rate</div>
+        <div class="heading-lg text-danger">{{stats.cancellation_rate || 0}}%</div>
+      </div>
+      <div class="card">
+        <div class="label mb-2">Equipment Categories</div>
+        <div class="heading-lg text-brand">{{stats.total_categories || 5}}</div>
       </div>
     </div>
   </div>
 
-  <!-- Asset Management Terminal -->
-  <div class="card reveal mb-5">
-    <div class="flex-between mb-3">
-      <h3 class="font-serif text-success">Asset Management Terminal</h3>
+  <!-- Recent Bookings Table -->
+  <div class="data-table-wrap mt-5">
+    <div class="data-table-head">
+      <span class="heading-sm">Recent Bookings</span>
+      <a href="#!/admin/calendar" class="btn btn-ghost btn-sm">View Calendar →</a>
     </div>
-    
     <div class="table-responsive">
-      <table class="table">
+      <table>
         <thead>
           <tr>
-            <th>ID / Designation</th>
-            <th>Base Yield</th>
-            <th>Stock Vol</th>
+            <th>ID</th>
+            <th>Customer</th>
+            <th>Event Date</th>
+            <th>Event Type</th>
+            <th>Total</th>
             <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr ng-repeat="eq in equipment">
+          <tr ng-repeat="b in recentBookings track by b.booking_id">
+            <td class="font-mono text-3">#{{b.booking_id}}</td>
+            <td class="text-1" style="font-weight:500;">{{b.customer_name}}</td>
+            <td>{{b.event_date | date:'dd MMM yyyy'}}</td>
+            <td><span class="badge badge-muted">{{b.event_type}}</span></td>
+            <td class="font-mono text-accent">₹{{b.total_price | number:0}}</td>
             <td>
-              <div class="font-mono text-muted mb-1">[ {{eq.id}} ]</div>
-              <strong class="font-serif">{{eq.name}}</strong>
+              <span class="status-chip" ng-class="b.status">{{b.status}}</span>
             </td>
             <td>
-              <div ng-show="editing !== eq">&#x20B9;{{eq.base_price}}</div>
-              <div class="flex gap-1" ng-show="editing === eq">
-                <input type="number" class="form-control font-mono" ng-model="eq.base_price" style="width:100px; height: 30px;">
+              <div class="flex gap-1">
+                <button class="btn btn-success btn-sm" ng-show="b.status === 'pending'" ng-click="confirmBooking(b.booking_id)">Confirm</button>
+                <button class="btn btn-danger btn-sm" ng-show="b.status === 'pending'" ng-click="cancelBooking(b.booking_id)">Cancel</button>
               </div>
-            </td>
-            <td>
-              <div ng-show="editing !== eq" class="font-mono">{{eq.stock_qty}}</div>
-              <div class="flex gap-1" ng-show="editing === eq">
-                <input type="number" class="form-control font-mono" ng-model="eq.stock_qty" style="width:80px; height: 30px;">
-              </div>
-            </td>
-            <td>
-              <button class="btn btn-outline" style="height: 30px; padding: 0 10px;" ng-show="editing !== eq" ng-click="editEquipment(eq)">EDIT</button>
-              <button class="btn btn-primary" style="height: 30px; padding: 0 10px;" ng-show="editing === eq" ng-click="saveEquipment(eq)">SAVE</button>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+    <div class="empty-state" style="padding:2rem;" ng-show="!recentBookings || recentBookings.length === 0">
+      <p class="text-3">No bookings found</p>
+    </div>
   </div>
 
-  <div class="grid grid-cols-2 mb-5">
-      <!-- Backtesting Module Link -->
-      <a href="#!/backtest" class="card reveal" style="text-decoration:none;">
-        <h3 class="font-serif text-warning mb-2">Algorithm Evaluation (Backtest)</h3>
-        <p class="text-secondary font-mono" style="font-size:0.85rem;">Run simulations to compare current Lerney Pricing engine yields against fixed-rate historic baselines.</p>
-        <div class="label mt-3">EXECUTE SIMULATION &rarr;</div>
-      </a>
-      
-      <!-- Pricing Logs Link -->
-      <a href="#!/pricing" class="card reveal" style="text-decoration:none;">
-        <h3 class="font-serif text-accent mb-2">Yield Variation Logs</h3>
-        <p class="text-secondary font-mono" style="font-size:0.85rem;">Inspect dynamic pricing changes generated by the engine over past transactions.</p>
-        <div class="label mt-3">ACCESS LOGS &rarr;</div>
-      </a>
+  <!-- Equipment Inventory -->
+  <div class="data-table-wrap mt-5">
+    <div class="data-table-head">
+      <span class="heading-sm">Equipment Inventory</span>
+      <span class="label">{{inventory.length}} items</span>
+    </div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Equipment</th>
+            <th>Category</th>
+            <th>Base Price</th>
+            <th>Current Price</th>
+            <th>Change</th>
+            <th>Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="eq in inventory track by eq.id">
+            <td class="text-1" style="font-weight:500;">{{eq.name}}</td>
+            <td><span class="badge badge-muted">{{eq.category_name}}</span></td>
+            <td class="font-mono text-3">₹{{eq.base_price | number:0}}</td>
+            <td class="font-mono text-accent">₹{{eq.current_price | number:0}}</td>
+            <td>
+              <span class="font-mono" ng-class="{'text-success': eq.current_price > eq.base_price, 'text-danger': eq.current_price < eq.base_price, 'text-3': eq.current_price == eq.base_price}" style="font-size:0.82rem;">
+                {{eq.current_price > eq.base_price ? '+' : ''}}{{((eq.current_price - eq.base_price) / eq.base_price * 100) | number:1}}%
+              </span>
+            </td>
+            <td>
+              <span class="stock-pill" ng-class="{'stock-ok': eq.stock_qty > 3, 'stock-low': eq.stock_qty > 0 && eq.stock_qty <= 3, 'stock-out': eq.stock_qty <= 0}">
+                {{eq.stock_qty}}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>

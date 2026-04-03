@@ -1,0 +1,48 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Event Packages</h1>
+      <p class="page-sub">Pre-configured equipment bundles for your events — save with automatic discounts</p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="flex-center" style="padding:4rem 0;" ng-show="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Packages Grid -->
+  <div class="grid grid-cols-2" style="gap:1.5rem;" ng-hide="loading">
+    <a href="#!/packages/{{pkg.slug}}" class="package-card reveal" ng-repeat="pkg in packages track by pkg.id"
+       ng-class="{'featured': pkg.is_featured}" style="position:relative; text-decoration:none;">
+      <div class="package-header">
+        <div class="flex-between">
+          <div>
+            <span class="badge badge-brand mb-2" style="display:inline-flex;" ng-show="pkg.is_featured">★ Featured</span>
+            <h3 style="font-size:1.35rem;">{{pkg.name}}</h3>
+          </div>
+          <div style="text-align:right;" ng-show="pkg.discount_pct > 0">
+            <span class="badge badge-success" style="font-size:0.8rem;">{{pkg.discount_pct}}% OFF</span>
+          </div>
+        </div>
+      </div>
+      <div class="package-body">
+        <p class="text-2" style="font-size:0.9rem; line-height:1.6; margin-bottom:1rem;">{{pkg.description}}</p>
+        <div class="flex gap-2 flex-wrap">
+          <span class="badge badge-muted" ng-show="pkg.event_type">{{pkg.event_type}}</span>
+          <span class="badge badge-muted">{{pkg.item_count || '4'}} items</span>
+        </div>
+      </div>
+      <div class="package-footer">
+        <span class="btn btn-outline btn-sm w-full" style="text-align:center;">View Package Details →</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" ng-show="!loading && (!packages || packages.length === 0)">
+    <div class="empty-state-icon">📦</div>
+    <h3>No packages available</h3>
+    <p>Check back later for pre-configured event bundles.</p>
+  </div>
+</div>

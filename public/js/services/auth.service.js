@@ -1,45 +1,50 @@
-angular.module('stageAlpha').service('AuthService', ['$window', 'ApiService', function($window, Api) {
-  var TOKEN_KEY = 'sa_access_token';
-  var USER_KEY  = 'sa_user';
+'use strict';
+angular.module('stageAlpha')
+.factory('AuthService', ['$window', function($window) {
+  var tokenKey = 'sa_access_token';
+  var userKey = 'sa_user';
 
-  this.login = function(email, password) {
-    return Api.post('/auth/login', { email: email, password: password }).then(function(res) {
-      $window.localStorage.setItem(TOKEN_KEY, res.data.data.access_token);
-      $window.localStorage.setItem(USER_KEY, JSON.stringify(res.data.data.user));
-      return res.data.data;
-    });
-  };
-
-  this.register = function(data) {
-    return Api.post('/auth/register', data).then(function(res) {
-      $window.localStorage.setItem(TOKEN_KEY, res.data.data.access_token);
-      $window.localStorage.setItem(USER_KEY, JSON.stringify(res.data.data.user));
-      return res.data.data;
-    });
-  };
-
-  this.logout = function() {
-    Api.post('/auth/logout', {}).catch(function(){});
-    $window.localStorage.removeItem(TOKEN_KEY);
-    $window.localStorage.removeItem(USER_KEY);
-    $window.location.href = '#!/login';
-  };
-
-  this.isLoggedIn = function() {
-    var token = $window.localStorage.getItem(TOKEN_KEY);
-    if (!token) return false;
+  function parseJwt(token) {
     try {
-      var payload = JSON.parse(atob(token.split('.')[1]));
-      return payload.exp > (Date.now() / 1000);
-    } catch(e) { return false; }
-  };
+      var base64Url = token.split('.')[1];
+      var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  }
 
-  this.getUser = function() {
-    try { return JSON.parse($window.localStorage.getItem(USER_KEY)); } catch(e) { return null; }
-  };
-
-  this.isAdmin = function() {
-    var user = this.getUser();
-    return user && user.role === 'admin';
+  return {
+    setToken: function(token) { $window.localStorage.setItem(tokenKey, token); },
+    getToken: function() { return $window.localStorage.getItem(tokenKey); },
+    setUser: function(user) { $window.localStorage.setItem(userKey, JSON.stringify(user)); },
+    getUser: function() {
+      var u = $window.localStorage.getItem(userKey);
+      return u ? JSON.parse(u) : null;
+    },
+    logout: function() {
+      $window.localStorage.removeItem(tokenKey);
+      $window.localStorage.removeItem(userKey);
+    },
+    isLoggedIn: function() {
+      var token = this.getToken();
+      if (!token) return false;
+      var decoded = parseJwt(token);
+      if (!decoded) return false;
+      if (decoded.exp * 1000 < Date.now()) {
+        this.logout();
+        return false;
+      }
+      return true;
+    },
+    isAdmin: function() {
+      if (!this.isLoggedIn()) return false;
+      var token = this.getToken();
+      var decoded = parseJwt(token);
+      return decoded && decoded.role && (decoded.role === 'admin' || decoded.role === 'manager');
+    }
   };
 }]);

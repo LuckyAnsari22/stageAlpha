@@ -10,6 +10,7 @@
 -- 1. CLEAN SLATE & RESET
 -- ─────────────────────────────────────────────
 TRUNCATE 
+    notifications, quote_items, quotes, package_items, packages, staff_assignments,
     audit_log, revenue_snapshots, backtest_results, demand_forecasts, 
     elasticity_estimates, price_history, pricing_rules, reviews, payments, 
     booking_staff, booking_items, bookings, equipment, staff, customers, 
@@ -290,6 +291,32 @@ END $$;
 
 
 -- ─────────────────────────────────────────────
+-- 5B. PACKAGES SEED
+-- ─────────────────────────────────────────────
+-- Seed packages
+INSERT INTO packages (name, slug, description, event_type, discount_pct, is_featured) VALUES
+  ('Wedding Essential', 'wedding-essential', 
+   'Complete audio-visual setup for a 200-500 guest wedding: PA system, mixer, wireless mics, basic lighting', 
+   'wedding', 5, true),
+  ('DJ Night Setup', 'dj-night-setup',
+   'Full DJ rig: CDJs, mixer, controller, subs, LED lighting effects',
+   'concert', 8, true),
+  ('Corporate Conference', 'corporate-conference', 
+   'Professional conference audio: podium mic, lapel mics, speakers, clean lighting',
+   'corporate', 5, false),
+  ('College Fest Pack', 'college-fest-pack',
+   'High-energy fest setup: powerful PA, DJ equipment, stage lighting',
+   'college_fest', 10, true);
+
+-- Link packages to equipment (adjust IDs to match your seed data)
+INSERT INTO package_items (package_id, equipment_id, qty, sort_order) VALUES
+  (1, 1, 2, 1), (1, 3, 1, 2), (1, 13, 2, 3), (1, 15, 2, 4),  -- Wedding
+  (2, 5, 2, 1), (2, 6, 1, 2), (2, 2, 2, 3), (2, 9, 8, 4),    -- DJ Night
+  (3, 1, 1, 1), (3, 3, 1, 2), (3, 13, 4, 3), (3, 16, 1, 4),  -- Corporate
+  (4, 1, 4, 1), (4, 5, 1, 2), (4, 6, 1, 3), (4, 9, 12, 4);   -- College Fest
+
+
+-- ─────────────────────────────────────────────
 -- 6. VERIFICATION SUMMARY
 -- ─────────────────────────────────────────────
 SELECT 'categories' AS tbl, COUNT(*) FROM categories
@@ -301,7 +328,9 @@ UNION ALL SELECT 'bookings', COUNT(*) FROM bookings
 UNION ALL SELECT 'booking_items', COUNT(*) FROM booking_items
 UNION ALL SELECT 'payments', COUNT(*) FROM payments
 UNION ALL SELECT 'reviews', COUNT(*) FROM reviews
-UNION ALL SELECT 'price_history', COUNT(*) FROM price_history;
+UNION ALL SELECT 'price_history', COUNT(*) FROM price_history
+UNION ALL SELECT 'packages', COUNT(*) FROM packages
+UNION ALL SELECT 'package_items', COUNT(*) FROM package_items;
 
 -- Re-enable triggers
 SET session_replication_role = 'origin';

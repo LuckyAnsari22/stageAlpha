@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title ng-bind="$root.pageTitle + ' | StageAlpha'">StageAlpha</title>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <meta name="description" content="StageAlpha — Professional Event Equipment Rental Platform with Dynamic Pricing. Book PA systems, DJ gear, stage lighting and more.">
+  <title ng-bind="$root.pageTitle + ' | StageAlpha'">StageAlpha — Event Equipment Rental</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎤</text></svg>">
   <link rel="stylesheet" href="/css/variables.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/components.css">
@@ -16,19 +17,95 @@
   <!-- NAVBAR -->
   <nav class="navbar" ng-controller="NavController">
     <a href="#!/" class="navbar-brand">Stage<span>Alpha</span></a>
-    <div class="navbar-links">
+
+    <div class="navbar-links" ng-class="{'open': mobileMenuOpen}">
       <a href="#!/equipment">Equipment</a>
+      <a href="#!/packages">Packages</a>
+      <a href="#!/availability" ng-show="isLoggedIn">Availability</a>
       <a href="#!/booking" ng-show="isLoggedIn">Book Now</a>
+      <a href="#!/account" ng-show="isLoggedIn">My Bookings</a>
+      <a href="#!/telemetry" ng-show="isLoggedIn" style="color:var(--danger); font-weight:700;"><span class="pulse-indicator" style="background:var(--danger); width:6px; height:6px; border-radius:50%; display:inline-block; animation: pulseGlow 1s infinite alternate; margin-right:4px;"></span>Overwatch</a>
       <a href="#!/admin" ng-show="isAdmin">Admin</a>
     </div>
+
+    <!-- GLOBAL SEARCH -->
+    <div class="search-bar" ng-class="{'search-bar--active': showResults}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
+           style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--text-3); pointer-events:none; z-index:1;">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" ng-model="searchQuery" ng-change="search()"
+             placeholder="Search equipment..." class="search-input">
+      <div class="search-dropdown" ng-show="showResults && searchResults.length > 0">
+        <div class="search-result" ng-repeat="item in searchResults" ng-click="goToEquipment(item.id)">
+          <span style="font-weight:600; flex-grow:1;">{{item.name}}</span>
+          <span class="badge badge-muted">{{item.category_name}}</span>
+          <span class="font-mono" style="color:var(--accent); margin-left:8px;">₹{{item.current_price | number:0}}</span>
+        </div>
+      </div>
+      <div class="search-overlay" ng-show="showResults" ng-click="closeSearch()"></div>
+    </div>
+
     <div class="navbar-right">
+      <!-- NOTIFICATIONS -->
+      <div class="notif-wrapper" ng-show="isLoggedIn">
+        <button class="btn btn-ghost btn-icon" ng-click="toggleNotifPanel()" ng-class="{'bell-animate': bellAnimating}" style="position:relative;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="cart-badge" ng-show="unreadCount > 0">{{unreadCount}}</span>
+        </button>
+
+        <div class="notif-panel" ng-show="showNotifPanel">
+          <div class="flex-between mb-3" style="border-bottom:1px solid var(--border); padding-bottom:8px;">
+            <span class="heading-sm">Notifications</span>
+            <button class="btn btn-ghost btn-sm" ng-click="markAllRead()" ng-show="unreadCount > 0">Mark all read</button>
+          </div>
+          <div ng-repeat="n in notifications track by n.id"
+               class="notif-item" ng-class="{'notif-item--unread': !n.is_read}">
+            <p class="notif-title">{{n.title}}</p>
+            <p class="notif-msg">{{n.message}}</p>
+            <p class="notif-time label">{{n.created_at | date:'dd MMM, h:mm a'}}</p>
+          </div>
+          <div class="empty-state" style="padding:2rem 1rem;" ng-show="notifications.length===0">
+            <p style="font-size:0.85rem;">No notifications yet</p>
+          </div>
+        </div>
+        <div style="position:fixed;inset:0;z-index:190" ng-show="showNotifPanel" ng-click="toggleNotifPanel()"></div>
+      </div>
+
+      <!-- CART -->
       <a href="#!/booking" class="cart-btn" ng-show="isLoggedIn && cartCount > 0">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+          <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/>
+        </svg>
         <span class="cart-badge">{{cartCount}}</span>
       </a>
+
+      <!-- AUTH BUTTONS -->
       <a href="#!/login" class="btn btn-outline btn-sm" ng-hide="isLoggedIn">Sign In</a>
-      <a href="#!/profile" class="text-secondary pointer" style="font-size:0.875rem" ng-show="isLoggedIn">[ {{currentUser.name}} ]</a>
-      <button class="btn btn-ghost btn-sm" ng-show="isLoggedIn" ng-click="logout()">Sign Out</button>
+      <a href="#!/register" class="btn btn-primary btn-sm" ng-hide="isLoggedIn">Register</a>
+
+      <!-- USER INFO -->
+      <a href="#!/profile" class="user-chip" ng-show="isLoggedIn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        {{currentUser.name}}
+      </a>
+      <button class="btn btn-ghost btn-sm" ng-show="isLoggedIn" ng-click="logout()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Logout
+      </button>
+
+      <!-- MOBILE HAMBURGER -->
+      <div class="hamburger" ng-click="mobileMenuOpen = !mobileMenuOpen">
+        <span></span><span></span><span></span>
+      </div>
     </div>
   </nav>
 
@@ -39,40 +116,97 @@
     </div>
   </div>
 
+  <!-- AURA: VOICE ASSISTANT -->
+  <div ng-controller="AuraCtrl" class="aura-container" style="position:fixed; bottom:30px; right:30px; z-index:9999; display:flex; flex-direction:column; align-items:flex-end;">
+    <div class="aura-bubble" ng-show="transcript" style="background:rgba(0,0,0,0.8); border:1px solid var(--brand); color:#fff; padding:10px 15px; border-radius:8px; margin-bottom:15px; max-width:250px; font-family:var(--font-mono); font-size:0.85rem; box-shadow:0 0 20px rgba(0, 240, 255, 0.3);">
+      {{transcript}}
+    </div>
+    <button ng-click="toggleAura()" class="btn btn-icon" style="width:60px; height:60px; border-radius:50%; background:var(--bg-card); border:2px solid var(--brand); box-shadow:0 0 15px rgba(0, 240, 255, 0.2); position:relative;" ng-class="{'listening': isListening}">
+      <!-- SVG Mic Icon -->
+      <svg width="24" height="24" fill="none" stroke="var(--brand)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+      <!-- Pulsing Ring for active listening -->
+      <div ng-show="isListening" style="position:absolute; inset:-5px; border-radius:50%; border:2px solid var(--brand); animation: pulseGlow 1s infinite alternate;"></div>
+    </button>
+  </div>
+
   <!-- MAIN VIEW -->
   <main>
-    <div ng-view></div>
+    <div ng-view class="fade-in"></div>
   </main>
 
+  <!-- FOOTER -->
   <footer>
     <div class="container">
-      <span class="label">StageAlpha &copy; 2025 · Event Equipment Rental Platform · NMIMS MPSTME Shirpur</span>
+      <div class="footer-brand">Stage<span>Alpha</span></div>
+      <div class="footer-links">
+        <a href="#!/equipment">Equipment</a>
+        <a href="#!/packages">Packages</a>
+        <a href="#!/availability">Availability</a>
+      </div>
+      <div class="footer-copy">© 2026 StageAlpha · NMIMS MPSTME Shirpur · DBMS + WP Project</div>
     </div>
   </footer>
 
   <!-- Scripts — ORDER MATTERS -->
-  <script src="/js/artistic.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular.min.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.3/angular-route.min.js"></script>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+  <!-- App Core -->
   <script src="/js/app.js"></script>
+
+  <!-- Services -->
   <script src="/js/services/api.service.js"></script>
   <script src="/js/services/auth.service.js"></script>
   <script src="/js/services/cart.service.js"></script>
   <script src="/js/services/socket.service.js"></script>
   <script src="/js/services/toast.service.js"></script>
-  <script src="/js/controllers/ToastController.js"></script>
+
+  <!-- Controllers -->
+  <script src="/js/controllers/aura.controller.js"></script>
   <script src="/js/controllers/nav.controller.js"></script>
   <script src="/js/controllers/home.controller.js"></script>
-  <script src="/js/controllers/profile.controller.js"></script>
   <script src="/js/controllers/auth.controller.js"></script>
+  <script src="/js/controllers/profile.controller.js"></script>
   <script src="/js/controllers/equipment-list.controller.js"></script>
   <script src="/js/controllers/equipment-detail.controller.js"></script>
   <script src="/js/controllers/booking.controller.js"></script>
   <script src="/js/controllers/booking-status.controller.js"></script>
+  <script src="/js/controllers/account.controller.js"></script>
+  <script src="/js/controllers/telemetry.controller.js"></script>
+  <script src="/js/controllers/invoice.controller.js"></script>
+  <script src="/js/controllers/packages.controller.js"></script>
+  <script src="/js/controllers/package-detail.controller.js"></script>
+  <script src="/js/controllers/availability.controller.js"></script>
+  <script src="/js/controllers/comparison.controller.js"></script>
   <script src="/js/controllers/admin.controller.js"></script>
   <script src="/js/controllers/pricing.controller.js"></script>
   <script src="/js/controllers/backtest.controller.js"></script>
+  <script src="/js/controllers/analytics.controller.js"></script>
+  <script src="/js/controllers/admin-calendar.controller.js"></script>
+  <script src="/js/controllers/admin-staff.controller.js"></script>
+  <script src="/js/controllers/admin-quotes.controller.js"></script>
+
+  <!-- Scroll reveal observer -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) { if (e.isIntersecting) { e.target.classList.add('revealed'); } });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+      // Re-observe on route changes (AngularJS SPA)
+      var mo = new MutationObserver(function() {
+        document.querySelectorAll('.reveal:not(.revealed)').forEach(function(el) { observer.observe(el); });
+      });
+      mo.observe(document.querySelector('[ng-view]') || document.body, { childList: true, subtree: true });
+    });
+  </script>
 </body>
 </html>

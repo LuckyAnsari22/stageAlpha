@@ -113,6 +113,54 @@ router.post('/login', login, loginValidation, handleValidation, async (req, res,
   }
 });
 
+// POST /api/v1/auth/google
+router.post('/google', async (req, res, next) => {
+  try {
+    // In production, verify the ID token using google-auth-library
+    // const { OAuth2Client } = require('google-auth-library');
+    // const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    // const ticket = await client.verifyIdToken({ idToken: req.body.token, audience: process.env.GOOGLE_CLIENT_ID });
+    // const payload = ticket.getPayload();
+    // const email = payload.email; const name = payload.name;
+    
+    // MOCK PAYLOAD FOR DEMO:
+    const email = 'google.user@stagealpha.com';
+    const name = 'Google Guest';
+    
+    // Find customer by email
+    const result = await pool.query('SELECT id, name, email, role, is_active FROM customers WHERE email = $1', [email]);
+    let user = result.rows[0];
+    
+    if (!user) {
+      // Create user if they don't exist
+      const insert = await pool.query(
+        `INSERT INTO customers (name, email, password_hash, role) VALUES ($1, $2, $3, 'customer') RETURNING id, name, email, role, is_active`,
+        [name, email, 'oauth_provider_login']
+      );
+      user = insert.rows[0];
+    }
+    
+    // Check if account suspended
+    if (!user.is_active) {
+      return res.status(403).json({ success: false, message: 'Account suspended' });
+    }
+    
+    // Update last_login_at
+    await pool.query('UPDATE customers SET last_login_at = NOW() WHERE id = $1', [user.id]);
+    
+    // Issue tokens
+    const { access_token, refresh_token } = generateTokens(user);
+    setRefreshCookie(res, refresh_token);
+    
+    res.json({
+      success: true,
+      data: { access_token, user }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/v1/auth/refresh
 router.post('/refresh', (req, res, next) => {
   try {

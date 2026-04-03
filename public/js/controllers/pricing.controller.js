@@ -1,94 +1,52 @@
-angular.module('stageAlpha').controller('PricingCtrl',
-['$scope', '$timeout', 'ApiService', 'ToastService',
-function($scope, $timeout, Api, Toast) {
+'use strict';
+angular.module('stageAlpha')
+.controller('PricingCtrl', ['$scope', '$http', 'ToastService',
+function($scope, $http, ToastService) {
   $scope.equipment = [];
-  $scope.selectedId = null;
-  $scope.selectedDate = '';
-  $scope.pricing = null;
-  $scope.priceHistory = [];
-  $scope.updating = false;
+  $scope.pricingData = [];
+  $scope.selectedEq = {};
+  $scope.selectedEqId = '';
   $scope.recalculating = false;
 
-  Api.get('/equipment?limit=100').then(function(res) {
-    $scope.equipment = res.data.data;
+  $http.get('/api/v1/equipment').then(function(res) {
+    $scope.equipment = res.data.data || res.data || [];
   });
 
-  $scope.calculate = function() {
-    if (!$scope.selectedId || !$scope.selectedDate) return;
-    
-    Api.get('/pricing/estimate/' + $scope.selectedId + '?event_date=' + $scope.selectedDate)
-      .then(function(res) {
-        $scope.pricing = res.data.data;
-        loadHistory();
-      })
-      .catch(function(err) {
-        Toast.error('Pricing estimate failed: ' + (err.data?.message || 'Error'));
-      });
+  $http.get('/api/v1/pricing/quant-metrics').then(function(res) {
+    $scope.pricingData = res.data.data || res.data || [];
+  }).catch(function() {});
+
+  $scope.loadPricingData = function() {
+    if (!$scope.selectedEqId) return;
+    $http.get('/api/v1/pricing/optimal/' + $scope.selectedEqId).then(function(res) {
+      var d = res.data.data || res.data;
+      $scope.selectedEq = {
+        base_price: d.base_price,
+        marginal_cost: d.marginal_cost,
+        elasticity: d.elasticity,
+        lerner_price: d.lerner_price,
+        seasonal_mult: d.seasonal_multiplier,
+        optimal_price: d.final_optimal_price
+      };
+    }).catch(function() {});
   };
 
-  function loadHistory() {
-    Api.get('/equipment/' + $scope.selectedId + '/price-history').then(function(res) {
-      $scope.priceHistory = res.data.data;
-      $scope.initChart();
-    });
-  }
-
-  $scope.updateAllPrices = function() {
-    $scope.updating = true;
-    Api.post('/pricing/update-all', {}).then(function(res) {
-      Toast.success('Prices updated for ' + res.data.data.length + ' items');
-    }).catch(function() {
-      Toast.error('Failed to run batch update');
-    }).finally(function() {
-      $scope.updating = false;
-    });
+  $scope.selectEquipment = function(item) {
+    $scope.selectedEqId = item.equipment_id;
+    $scope.loadPricingData();
   };
 
-  $scope.recalculateElasticity = function() {
-    if (!$scope.selectedId) return;
+  $scope.recalculateAll = function() {
     $scope.recalculating = true;
-    Api.post('/pricing/elasticity/' + $scope.selectedId + '/recalculate', {})
-      .then(function(res) {
-        Toast.success('Elasticity profile recalculation complete');
-      })
-      .catch(function() {
-        Toast.error('Failed to recalculate elasticity');
-      })
-      .finally(function() {
-        $scope.recalculate = false;
-        $scope.recalculating = false;
+    $http.post('/api/v1/pricing/batch-update').then(function() {
+      ToastService.show('All prices recalculated!', 'success');
+      $scope.recalculating = false;
+      $http.get('/api/v1/pricing/quant-metrics').then(function(res) {
+        $scope.pricingData = res.data.data || res.data || [];
       });
-  };
-
-  $scope.initChart = function() {
-    if (!$scope.priceHistory || $scope.priceHistory.length === 0) return;
-    
-    $timeout(function() {
-      var ctx = document.getElementById('pricingChart');
-      if (!ctx) return;
-      
-      var dataRows = angular.copy($scope.priceHistory).reverse();
-      var labels = dataRows.map(function(r) { return new Date(r.changed_at).toLocaleDateString(); });
-      var data = dataRows.map(function(r) { return parseFloat(r.new_price); });
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-             label: 'Optimal Price (₹)',
-             data: data,
-             borderColor: '#f97316',
-             backgroundColor: 'transparent',
-             tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: { y: { grid: { color: '#252538' } }, x: { grid: { display: false } } },
-          plugins: { legend: { display: false } }
-        }
-      });
-    }, 100);
+    }).catch(function() {
+      ToastService.show('Recalculation failed', 'error');
+      $scope.recalculating = false;
+    });
   };
 }]);

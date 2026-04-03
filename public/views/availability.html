@@ -1,0 +1,63 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Check Availability</h1>
+      <p class="page-sub">Check equipment availability for your event date</p>
+    </div>
+  </div>
+
+  <!-- Date Selector -->
+  <div class="card mb-5" style="max-width:600px;">
+    <h4 class="mb-3">Select Event Date</h4>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date</label>
+        <input type="date" class="input" ng-model="checkDate" ng-change="checkAvailability()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category (Optional)</label>
+        <select class="input" ng-model="selectedCategory" ng-change="checkAvailability()">
+          <option value="">All Categories</option>
+          <option ng-repeat="cat in categories" value="{{cat.id}}">{{cat.name}}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div ng-show="availabilityResults.length > 0">
+    <h3 class="mb-3">Available Equipment on {{checkDate | date:'dd MMM yyyy'}}</h3>
+    <div class="equipment-grid">
+      <div class="equip-card" ng-repeat="eq in availabilityResults track by eq.id">
+        <div class="equip-visual" ng-class="getCatClass(eq.category_name)">
+          <span class="equip-cat-icon">{{getCatIcon(eq.category_name)}}</span>
+          <span class="equip-badge">{{eq.category_name}}</span>
+        </div>
+        <div class="equip-body">
+          <div class="equip-name">{{eq.name}}</div>
+          <div class="equip-meta">
+            <span class="price-tag">₹{{eq.current_price | number:0}}</span>
+            <span class="stock-pill" ng-class="{'stock-ok': eq.available_qty > 3, 'stock-low': eq.available_qty > 0 && eq.available_qty <= 3, 'stock-out': eq.available_qty <= 0}">
+              {{eq.available_qty}} available
+            </span>
+          </div>
+          <div class="equip-actions">
+            <button class="btn btn-primary btn-sm" ng-click="addToCart(eq)" ng-disabled="eq.available_qty <= 0">Add to Cart</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state" ng-show="checkDate && availabilityResults.length === 0 && !loading">
+    <div class="empty-state-icon">📅</div>
+    <h3>No results</h3>
+    <p>No equipment available for the selected date and filters.</p>
+  </div>
+
+  <div class="empty-state" ng-show="!checkDate">
+    <div class="empty-state-icon">📅</div>
+    <h3>Select a date</h3>
+    <p>Choose your event date above to check available equipment.</p>
+  </div>
+</div>

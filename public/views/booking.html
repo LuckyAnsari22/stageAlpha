@@ -1,173 +1,157 @@
-<div class="main-content container container-sm mt-4">
-  <div class="text-center reveal">
-    <h1 class="font-display">Strategic Reservation</h1>
-    <p class="text-secondary font-mono mb-5">[ WIZARD_PROGRESS: {{step}}/4 ]</p>
-  </div>
-
-  <div class="stepper-nav reveal">
-    <div class="step-item" ng-class="{'active': step >= 1}">
-      <div class="step-num">1</div>
-      <span>Timeline</span>
-    </div>
-    <div class="step-item" ng-class="{'active': step >= 2}">
-      <div class="step-num">2</div>
-      <span>Manifest</span>
-    </div>
-    <div class="step-item" ng-class="{'active': step >= 3}">
-      <div class="step-num">3</div>
-      <span>Logistics</span>
-    </div>
-    <div class="step-item" ng-class="{'active': step >= 4}">
-      <div class="step-num">4</div>
-      <span>Execution</span>
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Book Equipment</h1>
+      <p class="page-sub">Review your cart and complete your booking</p>
     </div>
   </div>
 
-  <div class="card reveal" style="min-height: 400px; padding: var(--sp-5);">
-    
-    <!-- STEP 1: Date Selection -->
-    <div ng-show="step === 1">
-      <h2 class="font-serif mb-4 text-accent">1. Temporal Bounds</h2>
-      <div class="form-group mb-5">
-        <label class="form-label">Establish Operation Date</label>
-        <input type="date" class="form-control font-mono" style="font-size: 1.5rem; height: 60px;"
-               ng-model="dateInput" ng-change="processDateSelection()" 
-               min="{{minDate}}" required>
-        <p class="text-muted mt-2 font-mono"><small>All dynamic pricing matrices will anchor to this vector.</small></p>
-      </div>
+  <!-- Empty Cart State -->
+  <div class="empty-cart" ng-show="!loading && cart.length === 0">
+    <div class="empty-cart-icon">🛒</div>
+    <h3>Your cart is empty</h3>
+    <p class="text-3">Browse our equipment catalog to add items.</p>
+    <a href="#!/equipment" class="btn btn-primary mt-3">Browse Equipment</a>
+  </div>
 
-      <div class="alert bg-elevated mb-4" ng-show="eventDate" style="border-left: 2px solid var(--success);">
-        <span class="label text-success">Yield Lock Active</span>
-        <p class="mb-0">Prices have been locked for <strong>{{eventDate}}</strong> against the algorithmic curve.</p>
-      </div>
-
-      <div class="text-right">
-        <button class="btn btn-primary" ng-disabled="!eventDate || calculating" ng-click="nextStep()">
-          {{calculating ? '[ COMPUTING YIELDS... ]' : 'PROCEED TO MANIFEST'}}
-        </button>
-      </div>
-    </div>
-
-    <!-- STEP 2: Cart Review -->
-    <div ng-show="step === 2">
-      <h2 class="font-serif mb-4 text-accent">2. Manifest Review</h2>
-      
-      <div class="empty-state" ng-show="cart.length === 0">
-        <h3>Manifest Empty</h3>
-        <p>Return to the catalog to construct an operational payload.</p>
-        <a href="#!/equipment" class="btn btn-outline mt-3">Access Catalog</a>
-      </div>
-
-      <div ng-show="cart.length > 0">
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Designation</th>
-                <th>Qty</th>
-                <th class="text-right">Optimal Yield</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr ng-repeat="item in cart">
-                <td>
-                  <strong class="font-serif" style="font-size:1.2rem;">{{item.name}}</strong>
-                  <div class="label">{{item.category_name}}</div>
-                </td>
-                <td style="width: 100px;">
-                  <div class="flex items-center gap-1">
-                    <button class="btn btn-outline" style="height:28px; padding:0 8px;" ng-click="updateQty(item.equipment_id, -1)">-</button>
-                    <span class="font-mono text-center" style="width:20px;">{{item.qty}}</span>
-                    <button class="btn btn-outline" style="height:28px; padding:0 8px;" ng-click="updateQty(item.equipment_id, 1)">+</button>
-                  </div>
-                </td>
-                <td class="text-right font-mono text-gold">
-                  &#x20B9;{{ (pricing[item.equipment_id] || item.base_price) * item.qty }}
-                </td>
-                <td class="text-right">
-                  <button class="btn btn-outline" style="height:28px; padding:0 8px; border-color:var(--danger); color:var(--danger);" ng-click="removeItem(item.equipment_id)">X</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+  <!-- Cart with Items -->
+  <div class="checkout-layout" ng-show="cart.length > 0">
+    <!-- Left: Cart Items + Event Details -->
+    <div>
+      <!-- Step Indicator -->
+      <div class="stepper-nav mb-5">
+        <div class="step-item" ng-class="{'active': step === 1, 'done': step > 1}">
+          <span class="step-num">1</span> Cart Items
         </div>
+        <div class="step-item" ng-class="{'active': step === 2, 'done': step > 2}">
+          <span class="step-num">2</span> Event Details
+        </div>
+        <div class="step-item" ng-class="{'active': step === 3}">
+          <span class="step-num">3</span> Confirm
+        </div>
+      </div>
 
-        <div class="flex-between mt-5 pt-3 border-top">
-          <button class="btn btn-outline" ng-click="step = 1">Retreat</button>
-          
-          <div class="text-right">
-            <div class="font-mono text-muted mb-1">Subtotal: &#x20B9;{{subtotal() | number:0}}</div>
-            <div class="font-mono text-success mb-2" style="font-size: 1.5rem;">Operational Cost: &#x20B9;{{total() | number:0}}</div>
-            <button class="btn btn-primary" ng-click="nextStep()">CONFIRM LOGISTICS</button>
+      <!-- Step 1: Cart Items -->
+      <div class="section-card" ng-show="step === 1">
+        <div class="section-head">
+          <h2>Cart Items ({{cart.length}})</h2>
+          <button class="btn btn-ghost btn-sm" ng-click="clearCart()">Clear All</button>
+        </div>
+        <div class="cart-item" ng-repeat="item in cart track by item.id">
+          <div>
+            <div class="cart-name">{{item.name}}</div>
+            <div class="cart-cat">{{item.category_name}}</div>
+          </div>
+          <div class="cart-rate">₹{{item.current_price | number:0}}/day</div>
+          <div class="qty-control">
+            <button class="qty-btn" ng-click="updateQty(item, -1)">−</button>
+            <span class="qty-num">{{item.qty}}</span>
+            <button class="qty-btn" ng-click="updateQty(item, 1)">+</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" ng-click="removeFromCart(item)" style="color:var(--danger);">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+        <div style="padding:1rem 1.5rem; text-align:right;">
+          <button class="btn btn-primary" ng-click="step = 2">Continue to Event Details →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Event Details -->
+      <div class="section-card" ng-show="step === 2">
+        <div class="section-head">
+          <h2>Event Details</h2>
+        </div>
+        <div style="padding:1.5rem;">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Event Date</label>
+              <input type="date" class="input" ng-model="booking.event_date" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Event Type</label>
+              <select class="input" ng-model="booking.event_type">
+                <option value="wedding">Wedding</option>
+                <option value="birthday">Birthday</option>
+                <option value="corporate">Corporate</option>
+                <option value="concert">Concert</option>
+                <option value="college_fest">College Fest</option>
+                <option value="general">General</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Venue</label>
+            <select class="input" ng-model="booking.venue_id">
+              <option value="">Select a venue (optional)</option>
+              <option ng-repeat="v in venues" value="{{v.id}}">{{v.name}} — {{v.city}} (Capacity: {{v.capacity}})</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Special Requests</label>
+            <textarea class="input" ng-model="booking.special_requests" placeholder="Any special requirements..." rows="3"></textarea>
+          </div>
+          <div class="flex gap-2" style="justify-content:flex-end;">
+            <button class="btn btn-ghost" ng-click="step = 1">← Back</button>
+            <button class="btn btn-primary" ng-click="step = 3" ng-disabled="!booking.event_date">Review Order →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Confirm -->
+      <div class="section-card" ng-show="step === 3">
+        <div class="section-head">
+          <h2>Order Review</h2>
+        </div>
+        <div style="padding:1.5rem;">
+          <div class="alert alert-info mb-4">
+            Please review your order before confirming. Prices are dynamically calculated.
+          </div>
+          <div class="cart-item" ng-repeat="item in cart">
+            <div>
+              <div class="cart-name">{{item.name}}</div>
+              <div class="cart-cat">Qty: {{item.qty}}</div>
+            </div>
+            <div class="cart-rate">₹{{item.current_price * item.qty | number:0}}</div>
+          </div>
+          <div class="flex-between py-2 mt-3" style="font-size:0.9rem;">
+            <span class="text-2">Event: {{booking.event_type}} · {{booking.event_date | date:'dd MMM yyyy'}}</span>
+          </div>
+          <div class="flex gap-2 mt-4" style="justify-content:flex-end;">
+            <button class="btn btn-ghost" ng-click="step = 2">← Back</button>
+            <button class="btn btn-primary btn-lg" ng-click="submitBooking()" ng-disabled="submitting">
+              {{submitting ? 'Processing...' : 'Confirm Booking'}}
+            </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- STEP 3: Logistics Details -->
-    <div ng-show="step === 3">
-      <h2 class="font-serif mb-4 text-accent">3. Execution Logistics</h2>
-      
-      <div class="form-group mb-4">
-        <label class="form-label">Deployment Venue</label>
-        <select class="form-control font-serif" style="font-size: 1.2rem;" ng-model="venue" ng-options="v as v.name for v in venues track by v.id">
-          <option value="">-- Select Drop Coordinates --</option>
-        </select>
-        <p class="text-muted mt-1 font-mono" ng-show="venue"><small>Address: {{venue.address}}, {{venue.city}}</small></p>
-      </div>
-
-      <div class="form-group mb-4">
-        <label class="form-label">Classification Profile</label>
-        <select class="form-control" ng-model="eventType">
-          <option value="corporate">Corporate Assembly</option>
-          <option value="concert">Live Synchronization (Concert)</option>
-          <option value="wedding">Civilian Union (Wedding)</option>
-          <option value="private">Classified Directive (Private)</option>
-        </select>
-      </div>
-      
-      <div class="form-group mb-4">
-        <label class="form-label">Operational Overrides (Requests)</label>
-        <textarea class="form-control" ng-model="specialRequests" placeholder="Input any non-standard parameters..."></textarea>
-      </div>
-
-      <div class="flex-between border-top pt-4">
-        <button class="btn btn-outline" ng-click="step = 2">Retreat</button>
-        <button class="btn btn-primary" ng-disabled="!venue" ng-click="nextStep()">ENGAGE LOCK</button>
-      </div>
-    </div>
-
-    <!-- STEP 4: Review and Submit -->
-    <div ng-show="step === 4">
-      <h2 class="font-serif mb-4 text-warning">4. Final Authorization</h2>
-      
-      <div class="bg-hover p-4 mb-4" style="border-left: 2px solid var(--warning);">
-        <div class="grid grid-cols-2 mb-3 font-mono" style="font-size: 0.85rem;">
-          <div><span class="text-muted">Target Code:</span> {{venue.name}}</div>
-          <div><span class="text-muted">T-Zero Bounds:</span> {{eventDate}}</div>
-          <div><span class="text-muted">Profile:</span> {{eventType}}</div>
-          <div><span class="text-muted">Payload Volume:</span> {{cart.length}} items</div>
+    <!-- Right: Order Summary Sidebar -->
+    <div>
+      <div class="section-card" style="position:sticky; top:calc(var(--nav-h) + 2rem);">
+        <div class="section-head">
+          <h2>Order Summary</h2>
         </div>
-        
-        <div class="divider"></div>
-        <div class="flex-between font-mono">
-          <span class="text-muted">Total Resource Requirement:</span>
-          <span class="text-gold" style="font-size: 1.8rem;">&#x20B9;{{total() | number:0}}</span>
+        <div class="summary-rows">
+          <div class="summary-row" ng-repeat="item in cart">
+            <span>{{item.name}} × {{item.qty}}</span>
+            <span class="font-mono">₹{{item.current_price * item.qty | number:0}}</span>
+          </div>
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span class="font-mono">₹{{subtotal | number:0}}</span>
+          </div>
+          <div class="summary-row">
+            <span>GST (18%)</span>
+            <span class="font-mono">₹{{taxAmount | number:0}}</span>
+          </div>
+          <div class="summary-row total-row">
+            <span>Total</span>
+            <span class="font-mono gradient-text" style="font-size:1.2rem;">₹{{grandTotal | number:0}}</span>
+          </div>
         </div>
       </div>
-
-      <div class="alert border-accent text-accent mb-4 bg-hover" ng-show="error">
-        [ SYSTEM REJECTION ] {{error}}
-      </div>
-
-      <div class="flex-between border-top pt-4">
-        <button class="btn btn-outline" ng-click="step = 3" ng-disabled="submitting">Retreat</button>
-        <button class="btn btn-primary" ng-click="submitBooking()" ng-disabled="submitting" style="background: var(--warning); border-color: var(--warning); color: var(--bg-base);">
-          {{submitting ? '[ EXECUTING TRANSACTION BLOCK... ]' : '[ AUTHORIZE DEPLOYMENT ]'}}
-        </button>
-      </div>
     </div>
-
   </div>
 </div>

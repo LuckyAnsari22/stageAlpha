@@ -1,8 +1,12 @@
-angular.module('stageAlpha').service('ApiService', ['$http', function($http) {
-  var BASE = '/api/v1';
-  this.get    = function(url, config)      { return $http.get(BASE + url, config); };
-  this.post   = function(url, data)        { return $http.post(BASE + url, data); };
-  this.put    = function(url, data)        { return $http.put(BASE + url, data); };
-  this.patch  = function(url, data)        { return $http.patch(BASE + url, data); };
-  this.delete = function(url)             { return $http.delete(BASE + url); };
+'use strict';
+angular.module('stageAlpha')
+.factory('ApiService', ['$http', '$q', function($http, $q) {
+  var baseUrl = '/api/v1';
+  return {
+    get: function(path, config) { return $http.get(baseUrl + path, config); },
+    post: function(path, data, config) { return $http.post(baseUrl + path, data, config); },
+    put: function(path, data, config) { return $http.put(baseUrl + path, data, config); },
+    patch: function(path, data, config) { return $http.patch(baseUrl + path, data, config); },
+    delete: function(path, config) { return $http.delete(baseUrl + path, config); }
+  };
 }]);

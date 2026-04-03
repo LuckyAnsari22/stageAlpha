@@ -1,59 +1,88 @@
-angular.module('stageAlpha').controller('AuthCtrl',
-['$scope', '$location', '$rootScope', 'AuthService', 'ToastService',
-function($scope, $location, $root, Auth, Toast) {
-  $scope.loginData = {};
-  $scope.registerData = {};
-  $scope.loading = false;
-  $scope.errors = {};
-  $scope.showPwd = false;
-
-  $scope.togglePwd = function() { $scope.showPwd = !$scope.showPwd; };
+'use strict';
+angular.module('stageAlpha')
+.controller('AuthCtrl', ['$scope', '$location', '$http', 'AuthService', 'ToastService',
+function($scope, $location, $http, AuthService, ToastService) {
+  $scope.credentials = {};
+  $scope.error = null;
+  $scope.submitting = false;
+  $scope.showPassword = false;
+  $scope.success = false;
+  $scope.resetEmail = '';
 
   $scope.login = function() {
-    if ($scope.loading) return;
-    $scope.loading = true; $scope.errors = {};
-    Auth.login($scope.loginData.email, $scope.loginData.password)
-      .then(function(data) {
-        $root.currentUser = data.user;
-        $root.isLoggedIn  = true;
-        $root.isAdmin     = data.user.role === 'admin';
-        Toast.success('Welcome back, ' + data.user.name + '!');
-        $location.path(data.user.role === 'admin' ? '/admin' : '/');
-      })
-      .catch(function(err) {
-        $scope.errors.general = err.data?.message || 'Login failed';
-        Toast.error($scope.errors.general);
-      })
-      .finally(function() { $scope.loading = false; });
-  };
-
-  $scope.checkStrength = function() {
-    var p = $scope.registerData.password || '';
-    return {
-      len: p.length >= 8,
-      upper: /[A-Z]/.test(p),
-      num: /[0-9]/.test(p),
-      spec: /[@$!%*?&]/.test(p)
-    };
+    $scope.error = null;
+    $scope.submitting = true;
+    $http.post('/api/v1/auth/login', {
+      email: $scope.credentials.email,
+      password: $scope.credentials.password
+    }).then(function(res) {
+      var data = res.data.data;
+      AuthService.setToken(data.access_token);
+      AuthService.setUser(data.user);
+      ToastService.show('Welcome back, ' + data.user.name + '!', 'success');
+      $location.path('/');
+    }).catch(function(err) {
+      $scope.error = (err.data && err.data.message) || 'Invalid credentials';
+      $scope.submitting = false;
+    });
   };
 
   $scope.register = function() {
-    if ($scope.loading) return;
-    if ($scope.registerData.password !== $scope.registerData.confirmPassword) {
-      $scope.errors.confirmPassword = 'Passwords do not match'; return;
+    if ($scope.credentials.password !== $scope.credentials.confirmPassword) {
+      $scope.error = 'Passwords do not match';
+      return;
     }
-    $scope.loading = true; $scope.errors = {};
-    Auth.register($scope.registerData)
-      .then(function(data) {
-        $root.currentUser = data.user; $root.isLoggedIn = true;
-        Toast.success('Account created! Welcome to StageAlpha.');
-        $location.path('/');
-      })
-      .catch(function(err) {
-        var errors = err.data?.errors || [];
-        errors.forEach(function(e) { $scope.errors[e.path] = e.msg; });
-        $scope.errors.general = err.data?.message || 'Registration failed';
-      })
-      .finally(function() { $scope.loading = false; });
+    $scope.error = null;
+    $scope.submitting = true;
+    $http.post('/api/v1/auth/register', {
+      name: $scope.credentials.name,
+      email: $scope.credentials.email,
+      password: $scope.credentials.password,
+      phone: $scope.credentials.phone || null
+    }).then(function(res) {
+      var data = res.data.data;
+      AuthService.setToken(data.access_token);
+      AuthService.setUser(data.user);
+      ToastService.show('Account created! Welcome to StageAlpha.', 'success');
+      $location.path('/');
+    }).catch(function(err) {
+      $scope.error = (err.data && err.data.message) || 'Registration failed';
+      $scope.submitting = false;
+    });
+  };
+
+  $scope.resetPassword = function() {
+    $scope.submitting = true;
+    // Simulate — in production this would send an email
+    setTimeout(function() {
+      $scope.$apply(function() {
+        $scope.success = true;
+        $scope.submitting = false;
+      });
+    }, 1000);
+  };
+
+  $scope.loginWithGoogle = function() {
+    $scope.submittingGoogle = true;
+    $scope.error = null;
+    
+    // For demo/academic purposes, we simulate the OAuth popup and direct fallback
+    // In production, attach the real Google Identity SDK and pass the id_token
+    setTimeout(function() {
+      $scope.$apply(function() {
+        $http.post('/api/v1/auth/google', {
+          token: 'mock-google-id-token'
+        }).then(function(res) {
+          var data = res.data.data;
+          AuthService.setToken(data.access_token);
+          AuthService.setUser(data.user);
+          ToastService.show('Successfully logged in with Google!', 'success');
+          $location.path('/');
+        }).catch(function(err) {
+          $scope.error = (err.data && err.data.message) || 'Google authentication failed';
+          $scope.submittingGoogle = false;
+        });
+      });
+    }, 1000);
   };
 }]);

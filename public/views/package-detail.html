@@ -1,0 +1,82 @@
+<div class="page">
+  <!-- Loading -->
+  <div class="flex-center" style="min-height:50vh;" ng-show="loading"><div class="spinner"></div></div>
+
+  <div ng-hide="loading || error">
+    <div class="flex gap-2 mb-4" style="font-size:0.82rem;">
+      <a href="#!/packages" class="text-3">Packages</a>
+      <span class="text-3">›</span>
+      <span class="text-2">{{package.name}}</span>
+    </div>
+
+    <div class="page-header">
+      <div>
+        <span class="badge badge-brand mb-2" style="display:inline-flex;" ng-show="package.is_featured">★ Featured</span>
+        <h1 class="page-title">{{package.name}}</h1>
+        <p class="page-sub">{{package.description}}</p>
+      </div>
+      <div ng-show="package.discount_pct > 0">
+        <span class="badge badge-success" style="font-size:1rem; padding:0.5rem 1rem;">{{package.discount_pct}}% Discount</span>
+      </div>
+    </div>
+
+    <!-- Package Info -->
+    <div class="grid grid-cols-3 mb-5" style="gap:1rem;">
+      <div class="kpi-card">
+        <div class="kpi-label">Event Type</div>
+        <div class="kpi-value text-brand" style="font-size:1.2rem; text-transform:capitalize;">{{package.event_type}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Items Included</div>
+        <div class="kpi-value text-accent" style="font-size:1.2rem;">{{packageItems.length}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Package Total</div>
+        <div class="kpi-value gradient-text" style="font-size:1.2rem;">₹{{packageTotal | number:0}}</div>
+        <div class="kpi-sub" ng-show="package.discount_pct > 0">Save ₹{{packageSavings | number:0}}</div>
+      </div>
+    </div>
+
+    <!-- Included Equipment -->
+    <div class="data-table-wrap">
+      <div class="data-table-head">
+        <span class="heading-sm">Included Equipment</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Equipment</th>
+            <th>Category</th>
+            <th>Qty</th>
+            <th>Unit Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="item in packageItems">
+            <td class="text-1" style="font-weight:500;">{{item.name}}</td>
+            <td><span class="badge badge-muted">{{item.category_name}}</span></td>
+            <td class="font-mono">{{item.qty}}</td>
+            <td class="font-mono text-2">₹{{item.current_price | number:0}}</td>
+            <td class="font-mono text-accent">₹{{item.current_price * item.qty | number:0}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CTA -->
+    <div class="flex gap-2 mt-5">
+      <button class="btn btn-primary btn-lg" ng-click="bookPackage()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+        Book This Package
+      </button>
+      <a href="#!/packages" class="btn btn-ghost btn-lg">← Back to Packages</a>
+    </div>
+  </div>
+
+  <div class="empty-state" ng-show="error">
+    <div class="empty-state-icon">📦</div>
+    <h3>Package Not Found</h3>
+    <a href="#!/packages" class="btn btn-outline mt-3">Back to Packages</a>
+  </div>
+</div>

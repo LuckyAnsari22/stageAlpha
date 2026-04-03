@@ -4,6 +4,28 @@ const { pool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { checkCache, invalidate, invalidatePattern } = require('../middleware/cache');
 
+// 0. GET /api/v1/equipment/search
+router.get('/search', async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    const limit = parseInt(req.query.limit) || 5;
+    if (!q) return res.json({ success: true, data: [] });
+
+    const formattedQuery = q.trim().replace(/\s+/g, ' & ');
+
+    const { rows } = await pool.query(`
+      SELECT *, ts_rank(search_vector, to_tsquery('english', $1)) AS rank
+      FROM equipment 
+      WHERE search_vector @@ to_tsquery('english', $1) AND is_active = true
+      ORDER BY rank DESC LIMIT $2
+    `, [formattedQuery, limit]);
+    
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // 1. GET /api/v1/equipment
 router.get('/', checkCache(req => `equipment:list:${JSON.stringify(req.query)}`, 300), async (req, res, next) => {
   try {

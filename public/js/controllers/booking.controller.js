@@ -1,120 +1,77 @@
-angular.module('stageAlpha').controller('BookingCtrl',
-['$scope', '$location', '$q', 'ApiService', 'CartService', 'ToastService',
-function($scope, $location, $q, Api, Cart, Toast) {
+'use strict';
+angular.module('stageAlpha')
+.controller('BookingCtrl', ['$scope', '$location', '$http', 'CartService', 'AuthService', 'ToastService', '$rootScope',
+function($scope, $location, $http, CartService, AuthService, ToastService, $rootScope) {
+  $scope.cart = CartService.getAll();
   $scope.step = 1;
-  $scope.cart = Cart.getItems();
-  $scope.eventDate = Cart.getEventDate() || '';
-  $scope.venue_id = null;
+  $scope.booking = { event_type: 'general' };
   $scope.venues = [];
-  $scope.eventType = 'wedding';
-  $scope.specialRequests = '';
-  $scope.pricing = {};
   $scope.submitting = false;
 
-  var tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  $scope.minDate = tomorrow.toISOString().split('T')[0];
-
-  Api.get('/venues').then(function(res) {
-    $scope.venues = res.data.data;
-  });
-
-  $scope.refreshCart = function() {
-    $scope.cart = Cart.getItems();
-  };
-
-  $scope.$on('cart:updated', $scope.refreshCart);
-
-  $scope.updatePrices = function() {
-    if (!$scope.eventDate) return;
-    Cart.setEventDate($scope.eventDate);
-    
-    var promises = $scope.cart.map(function(item) {
-      return Api.get('/equipment/' + item.equipment_id + '/price?event_date=' + $scope.eventDate)
-        .then(function(res) {
-          $scope.pricing[item.equipment_id] = res.data.data;
-          item.algorithm_price = res.data.data.final_optimal_price;
-        }).catch(function() {
-          $scope.pricing[item.equipment_id] = null;
-        });
-    });
-    
-    $q.all(promises).then(function() {
-      // Optional logging
-    });
-  };
-
-  $scope.updateQty = function(id, qty) {
-    Cart.updateQty(id, parseInt(qty));
-  };
-  
-  $scope.removeItem = function(id) {
-    Cart.remove(id);
-  };
-
-  $scope.subtotal = function() {
-    return $scope.cart.reduce(function(sum, item) {
-      var p = item.algorithm_price || item.base_price;
-      return sum + (p * item.qty);
+  // Calculate totals
+  function calcTotals() {
+    $scope.subtotal = $scope.cart.reduce(function(sum, item) {
+      return sum + (item.current_price * item.qty);
     }, 0);
+    $scope.taxAmount = Math.round($scope.subtotal * 0.18);
+    $scope.grandTotal = $scope.subtotal + $scope.taxAmount;
+  }
+  calcTotals();
+
+  // Load venues
+  $http.get('/api/v1/venues').then(function(res) {
+    $scope.venues = res.data.data || res.data || [];
+  }).catch(function() {});
+
+  $scope.updateQty = function(item, delta) {
+    CartService.updateQty(item.id, item.qty + delta);
+    $scope.cart = CartService.getAll();
+    $rootScope.$broadcast('cart:updated');
+    calcTotals();
   };
 
-  $scope.tax = function() {
-    return $scope.subtotal() * 0.18;
+  $scope.removeFromCart = function(item) {
+    CartService.remove(item.id);
+    $scope.cart = CartService.getAll();
+    $rootScope.$broadcast('cart:updated');
+    calcTotals();
   };
 
-  $scope.total = function() {
-    return $scope.subtotal() + $scope.tax();
-  };
-
-  $scope.nextStep = function() {
-    if ($scope.step === 1) {
-      if (!$scope.eventDate) return Toast.error('Please select an event date.');
-      var selectedDate = new Date($scope.eventDate);
-      var min = new Date($scope.minDate);
-      // Strip time bounds cleanly
-      selectedDate.setHours(0,0,0,0); min.setHours(0,0,0,0);
-      if (selectedDate < min) {
-        return Toast.error('Please select a valid future event date.');
-      }
-      if (!$scope.venue_id) {
-        return Toast.error('Please select a venue.');
-      }
-      $scope.updatePrices();
-      $scope.step = 2;
-    } 
-    else if ($scope.step === 2) {
-      if ($scope.cart.length === 0) return Toast.error('Your cart is empty.');
-      $scope.step = 3;
-    }
-    else if ($scope.step === 3) {
-      $scope.step = 4;
-    }
-  };
-
-  $scope.prevStep = function() {
-    if ($scope.step > 1) $scope.step--;
+  $scope.clearCart = function() {
+    CartService.clear();
+    $scope.cart = [];
+    $rootScope.$broadcast('cart:updated');
+    calcTotals();
   };
 
   $scope.submitBooking = function() {
+    if ($scope.submitting) return;
     $scope.submitting = true;
-    
-    var payload = {
-      event_date: $scope.eventDate,
-      venue_id: $scope.venue_id,
-      event_type: $scope.eventType,
-      special_requests: $scope.specialRequests,
-      items: $scope.cart.map(function(i) { return { equipment_id: i.equipment_id, qty: i.qty }; })
-    };
 
-    Api.post('/bookings', payload).then(function(res) {
-      Cart.clear();
-      Toast.success('Booking successfully placed!');
-      $location.path('/booking/' + res.data.data.booking_id);
+    var items = $scope.cart.map(function(item) {
+      return { equipment_id: item.id, qty: item.qty };
+    });
+
+    $http.post('/api/v1/bookings', {
+      event_date: $scope.booking.event_date,
+      event_type: $scope.booking.event_type,
+      venue_id: $scope.booking.venue_id || null,
+      special_requests: $scope.booking.special_requests || null,
+      items: items
+    }).then(function(res) {
+      CartService.clear();
+      $rootScope.$broadcast('cart:updated');
+      ToastService.show('Booking created successfully!', 'success');
+      var dataObj = res.data.data || res.data;
+      var bookingId = dataObj.booking_id || dataObj.id || '';
+      if(bookingId) {
+        $location.path('/booking/' + bookingId);
+      } else {
+        $location.path('/account');
+      }
     }).catch(function(err) {
-      Toast.error(err.data?.message || 'Failed to place booking.');
-    }).finally(function() {
       $scope.submitting = false;
+      ToastService.show((err.data && err.data.message) || 'Booking failed. Please try again.', 'error');
     });
   };
 }]);

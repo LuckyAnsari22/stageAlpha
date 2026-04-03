@@ -7,6 +7,32 @@ angular.module('stageAlpha').controller('HardwareState',
     $scope.searchText = "";
     $scope.activeCategory = null;
     $scope.cartCount = CartService.getItemCount();
+    $scope.compareList = [];
+
+    $scope.addToCompare = function(item) {
+        if ($scope.compareList.length >= 3) { 
+            alert('Max 3 items to compare'); 
+            return; 
+        }
+        if ($scope.compareList.find(function(i) { return i.id === item.id; })) { 
+            alert('Already in comparison'); 
+            return; 
+        }
+        $scope.compareList.push(item);
+    };
+
+    $scope.removeFromCompare = function(id) {
+        $scope.compareList = $scope.compareList.filter(function(i) { return i.id !== id; });
+    };
+
+    $scope.goCompare = function() {
+        if ($scope.compareList.length < 2) { 
+            alert('Add at least 2 items to compare'); 
+            return; 
+        }
+        sessionStorage.setItem('compare_ids', JSON.stringify($scope.compareList.map(function(i) { return i.id; })));
+        $location.path('/equipment/compare');
+    };
 
     function executeSync() {
         ApiService.getAssets().then(function(res) {

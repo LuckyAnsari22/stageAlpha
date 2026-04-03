@@ -170,12 +170,24 @@ router.get('/:id', authenticate, async (req, res, next) => {
 });
 
 // PATCH /api/v1/bookings/:id/status
-router.patch('/:id/status', authenticate, requireAdmin, async (req, res, next) => {
+router.patch('/:id/status', authenticate, async (req, res, next) => {
   try {
     const { status } = req.body; 
     const permitted = ['pending', 'confirmed', 'completed', 'cancelled'];
     if (!permitted.includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status provided' });
+    }
+
+    // Role checks
+    if (req.user.role !== 'admin') {
+      if (status !== 'cancelled') {
+        return res.status(403).json({ success: false, message: 'Customers can only cancel bookings' });
+      }
+      // Guarantee it's their booking
+      const check = await pool.query('SELECT customer_id FROM bookings WHERE id = $1', [req.params.id]);
+      if (!check.rows[0] || check.rows[0].customer_id !== req.user.id) {
+        return res.status(403).json({ success: false, message: 'Forbidden to modify this booking' });
+      }
     }
 
     const { rows } = await pool.query(
@@ -185,6 +197,8 @@ router.patch('/:id/status', authenticate, requireAdmin, async (req, res, next) =
     
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Booking not found' });
 
+    const booking = rows[0];
+
     // Note: Database trigger handles stock restoration automatically if "deleted"
     // Wait; if it's "cancelled", stock restoration might be mapped in the schema logic
     
@@ -192,6 +206,52 @@ router.patch('/:id/status', authenticate, requireAdmin, async (req, res, next) =
     if (socketService.emitBookingUpdated) {
       socketService.emitBookingUpdated(req.params.id, status);
     }
+
+    if (status === 'confirmed') {
+      const { createNotification } = require('../services/socket');
+      await createNotification(
+        booking.customer_id,
+        'booking_confirmed',
+        'Booking Confirmed! 🎉',
+        `Your booking #${booking.id} for ${booking.event_date.toISOString().slice(0,10)} has been confirmed.`,
+        '/bookings/' + booking.id
+      );
+    }
+
+    res.json({ success: true, data: booking });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/v1/bookings/:id/invoice
+router.get('/:id/invoice', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT b.id, b.event_date, b.event_type, b.created_at, b.status, b.subtotal, b.tax_amount, b.total_price,
+             b.customer_id,
+             c.name as customer_name, c.email as customer_email,
+             v.name as venue_name
+      FROM bookings b 
+      JOIN customers c ON b.customer_id = c.id
+      LEFT JOIN venues v ON b.venue_id = v.id
+      WHERE b.id = $1
+    `, [req.params.id]);
+
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Booking not found' });
+    
+    if (req.user.role !== 'admin' && rows[0].customer_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Forbidden to access this invoice' });
+    }
+
+    const { rows: itemsRows } = await pool.query(`
+      SELECT bi.*, e.name AS equipment_name
+      FROM booking_items bi
+      JOIN equipment e ON bi.equipment_id = e.id
+      WHERE bi.booking_id = $1
+    `, [req.params.id]);
+
+    rows[0].items = itemsRows;
 
     res.json({ success: true, data: rows[0] });
   } catch (err) {

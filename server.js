@@ -21,7 +21,6 @@ app.use(cors({                                       // 2. CORS
 }))
 app.use(express.json({ limit: '10kb' }))             // 3. Body parsing (limit prevents attacks)
 app.use(express.urlencoded({ extended: false }))     // 4. Form body
-app.use(require('./middleware/rateLimit').general)   // 5. Rate limiting
 
 // URL normalization middleware (uses built-in url module — required for course)
 app.use((req, res, next) => {
@@ -34,6 +33,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'public')))
 
 // Routes
+app.use('/api', require('./middleware/rateLimit').general) // Apply rate limiting ONLY to APIs, not static files!
 app.use('/api/v1/auth',       require('./routes/auth'))
 app.use('/api/v1/equipment',  require('./routes/equipment'))
 app.use('/api/v1/categories', require('./routes/categories'))
@@ -42,8 +42,12 @@ app.use('/api/v1/bookings',   require('./routes/bookings'))
 app.use('/api/v1/customers',  require('./routes/customers'))
 app.use('/api/v1/payments',   require('./routes/payments'))
 app.use('/api/v1/analytics',  require('./routes/analytics'))
-app.use('/api/v1/pricing',    require('./routes/pricing'))
-app.use('/api/v1/backtest',   require('./routes/backtest'))
+app.use('/api/v1/pricing',       require('./routes/pricing'))
+app.use('/api/v1/backtest',      require('./routes/backtest'))
+app.use('/api/v1/packages',      require('./routes/packages'))
+app.use('/api/v1/quotes',        require('./routes/quotes'))
+app.use('/api/v1/notifications', require('./routes/notifications'))
+app.use('/api/v1/staff',         require('./routes/staff'))
 
 // Health check
 app.get('/api/v1/health', (req, res) => {

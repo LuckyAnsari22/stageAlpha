@@ -9,6 +9,12 @@
 -- ─────────────────────────────────────────────
 -- CLEAN SLATE (reverse dependency order)
 -- ─────────────────────────────────────────────
+DROP TABLE IF EXISTS notifications       CASCADE;
+DROP TABLE IF EXISTS quote_items         CASCADE;
+DROP TABLE IF EXISTS quotes              CASCADE;
+DROP TABLE IF EXISTS package_items       CASCADE;
+DROP TABLE IF EXISTS packages            CASCADE;
+DROP TABLE IF EXISTS staff_assignments   CASCADE;
 DROP TABLE IF EXISTS audit_log           CASCADE;
 DROP TABLE IF EXISTS revenue_snapshots   CASCADE;
 DROP TABLE IF EXISTS backtest_results    CASCADE;
@@ -280,6 +286,99 @@ CREATE TABLE audit_log (
 );
 
 -- ═══════════════════════════════════════════════
+-- LAYER 6 — Packages, Quotes, Notifications
+-- ═══════════════════════════════════════════════
+
+-- 19. Packages
+CREATE TABLE packages (
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  slug        VARCHAR(120) NOT NULL UNIQUE,
+  description TEXT,
+  event_type  VARCHAR(50),
+  discount_pct DECIMAL(5,2) DEFAULT 0 CHECK(discount_pct >= 0 AND discount_pct <= 50),
+  is_featured BOOLEAN DEFAULT false,
+  is_active   BOOLEAN DEFAULT true,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE packages IS 'Pre-built event equipment bundles (Wedding Package, Corporate Setup, etc.)';
+
+-- 20. Package Items
+CREATE TABLE package_items (
+  id           SERIAL PRIMARY KEY,
+  package_id   INT NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+  equipment_id INT NOT NULL REFERENCES equipment(id) ON DELETE RESTRICT,
+  qty          INT NOT NULL DEFAULT 1 CHECK(qty > 0),
+  sort_order   INT DEFAULT 0,
+  UNIQUE(package_id, equipment_id)
+);
+
+-- 21. Quotes
+CREATE TABLE quotes (
+  id           SERIAL PRIMARY KEY,
+  customer_id  INT NOT NULL REFERENCES customers(id) ON DELETE RESTRICT,
+  event_date   DATE NOT NULL,
+  venue_id     INT REFERENCES venues(id) ON DELETE SET NULL,
+  event_type   VARCHAR(50) DEFAULT 'general',
+  status       VARCHAR(20) NOT NULL DEFAULT 'pending'
+               CHECK(status IN ('pending','sent','accepted','rejected','expired','converted')),
+  subtotal     DECIMAL(10,2) DEFAULT 0,
+  tax_amount   DECIMAL(10,2) DEFAULT 0,
+  total_price  DECIMAL(10,2) DEFAULT 0,
+  valid_until  TIMESTAMPTZ,
+  notes        TEXT,
+  admin_notes  TEXT,
+  converted_booking_id INT REFERENCES bookings(id) ON DELETE SET NULL,
+  created_at   TIMESTAMPTZ DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ DEFAULT NOW()
+);
+COMMENT ON TABLE quotes IS 'Customer quote requests before committing to a booking';
+
+-- 22. Quote Items
+CREATE TABLE quote_items (
+  id           SERIAL PRIMARY KEY,
+  quote_id     INT NOT NULL REFERENCES quotes(id) ON DELETE CASCADE,
+  equipment_id INT NOT NULL REFERENCES equipment(id) ON DELETE RESTRICT,
+  qty          INT NOT NULL CHECK(qty > 0),
+  unit_price   DECIMAL(10,2) NOT NULL,
+  UNIQUE(quote_id, equipment_id)
+);
+
+-- 23. Notifications
+CREATE TABLE notifications (
+  id          BIGSERIAL PRIMARY KEY,
+  customer_id INT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  type        VARCHAR(50) NOT NULL,
+  title       VARCHAR(150) NOT NULL,
+  message     TEXT NOT NULL,
+  link        VARCHAR(200),
+  is_read     BOOLEAN DEFAULT false,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 24. Staff Assignments (enhanced from booking_staff)
+-- Keep booking_staff for the M:N, add this for richer data
+CREATE TABLE staff_assignments (
+  id           SERIAL PRIMARY KEY,
+  booking_id   INT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  staff_id     INT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+  role_at_event VARCHAR(50),
+  assigned_at  TIMESTAMPTZ DEFAULT NOW(),
+  confirmed_at TIMESTAMPTZ,
+  notes        TEXT,
+  UNIQUE(booking_id, staff_id)
+);
+
+-- Full-text search on equipment (ALTER existing table)
+-- Add tsvector column for fast full-text search
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS
+  search_vector TSVECTOR GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(description, '')), 'B')
+  ) STORED;
+
+-- ═══════════════════════════════════════════════
 -- INDEXES (created after all tables)
 -- ═══════════════════════════════════════════════
 
@@ -304,6 +403,14 @@ CREATE INDEX idx_price_history_equipment ON price_history (equipment_id, changed
 CREATE INDEX idx_audit_log_table_record  ON audit_log (table_name, record_id);
 CREATE INDEX idx_audit_log_time          ON audit_log (changed_at DESC);
 
+-- notifications
+CREATE INDEX idx_notifications_customer ON notifications(customer_id, is_read, created_at DESC);
+
+-- equipment fts
+CREATE INDEX idx_equipment_fts ON equipment USING GIN(search_vector);
+COMMENT ON COLUMN equipment.search_vector IS 
+  'Full-text search vector. A-weight on name, B-weight on description. Uses GIN index.';
+
 -- ═══════════════════════════════════════════════
 -- VERIFICATION
 -- ═══════════════════════════════════════════════
@@ -319,8 +426,8 @@ BEGIN
 
   RAISE NOTICE '✓ % tables created', cnt;
 
-  IF cnt < 17 THEN
-    RAISE EXCEPTION 'Expected 17 tables, got %', cnt;
+  IF cnt < 23 THEN
+    RAISE EXCEPTION 'Expected 23 tables, got %', cnt;
   END IF;
 END $$;
 

@@ -1,0 +1,105 @@
+<div class="invoice-page" id="invoice-content">
+  <div class="flex-between mb-5">
+    <a href="#!/account" class="btn btn-ghost btn-sm">← Back</a>
+    <button class="btn btn-primary btn-sm" onclick="window.print()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Print Invoice
+    </button>
+  </div>
+
+  <div class="invoice-card" ng-show="booking">
+    <!-- Header -->
+    <div class="invoice-header">
+      <div>
+        <div class="heading-lg" style="margin-bottom:0.25rem;">Stage<span class="gradient-text">Alpha</span></div>
+        <p class="text-3" style="font-size:0.82rem;">Event Equipment Rental Platform</p>
+        <p class="text-3" style="font-size:0.78rem; margin-top:0.5rem;">NMIMS MPSTME, Shirpur, Maharashtra</p>
+      </div>
+      <div style="text-align:right;">
+        <div class="heading-md" style="margin-bottom:0.5rem;">INVOICE</div>
+        <div class="font-mono text-3" style="font-size:0.82rem;">
+          Invoice #INV-{{booking.id}}<br>
+          Date: {{booking.event_date | date:'dd MMM yyyy'}}<br>
+          Status: <span class="text-1">{{booking.status | uppercase}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customer Info -->
+    <div class="grid grid-cols-2 mb-5" style="gap:2rem;">
+      <div>
+        <div class="label mb-2">Bill To</div>
+        <div class="text-1" style="font-weight:600;">{{customer.name}}</div>
+        <div class="text-3" style="font-size:0.85rem;">{{customer.email}}</div>
+      </div>
+      <div>
+        <div class="label mb-2">Event Details</div>
+        <div class="text-2" style="font-size:0.85rem;">
+          Type: {{booking.event_type}}<br>
+          Venue: {{booking.venue_name || 'N/A'}}<br>
+          Date: {{booking.event_date | date:'dd MMM yyyy'}}
+        </div>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <table style="margin-bottom:2rem;">
+      <thead>
+        <tr>
+          <th style="text-align:left;">#</th>
+          <th style="text-align:left;">Item</th>
+          <th style="text-align:center;">Qty</th>
+          <th style="text-align:right;">Unit Price</th>
+          <th style="text-align:right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="item in items">
+          <td class="font-mono text-3">{{$index + 1}}</td>
+          <td class="text-1" style="font-weight:500;">{{item.name}}</td>
+          <td class="font-mono" style="text-align:center;">{{item.qty}}</td>
+          <td class="font-mono" style="text-align:right;">₹{{item.final_price | number:2}}</td>
+          <td class="font-mono text-accent" style="text-align:right;">₹{{item.final_price * item.qty | number:2}}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="invoice-totals">
+      <div class="flex-between py-2" style="max-width:300px; margin-left:auto;">
+        <span class="text-3">Subtotal</span>
+        <span class="font-mono">₹{{booking.subtotal | number:2}}</span>
+      </div>
+      <div class="flex-between py-2" style="max-width:300px; margin-left:auto;">
+        <span class="text-3">GST ({{booking.tax_pct}}%)</span>
+        <span class="font-mono">₹{{booking.tax_amount | number:2}}</span>
+      </div>
+      <div class="flex-between py-2" style="max-width:300px; margin-left:auto; border-top:2px solid var(--border); font-weight:700; font-size:1.1rem;">
+        <span class="text-1">Total</span>
+        <span class="font-mono gradient-text" style="font-size:1.3rem;">₹{{booking.total_price | number:2}}</span>
+      </div>
+    </div>
+
+    <!-- Payment Info -->
+    <div class="mt-5" style="padding-top:1.5rem; border-top:1px solid var(--border);" ng-show="payment">
+      <div class="flex-between">
+        <div>
+          <div class="label mb-1">Payment Method</div>
+          <span class="badge badge-success">{{payment.method}} · {{payment.status}}</span>
+        </div>
+        <div ng-show="payment.reference_no">
+          <div class="label mb-1">Reference</div>
+          <span class="font-mono text-2">{{payment.reference_no}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+    <div style="margin-top:3rem; text-align:center; padding-top:1.5rem; border-top:1px solid var(--border);">
+      <p class="text-3" style="font-size:0.78rem;">
+        This is a computer-generated invoice. Prices were dynamically calculated using the StageAlpha pricing engine.<br>
+        Thank you for choosing StageAlpha for your event needs.
+      </p>
+    </div>
+  </div>
+</div>

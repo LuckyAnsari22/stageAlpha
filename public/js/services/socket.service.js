@@ -1,22 +1,47 @@
-angular.module('stageAlpha').service('SocketService', ['$rootScope', function($root) {
+'use strict';
+angular.module('stageAlpha')
+.factory('SocketService', ['AuthService', '$rootScope', function(AuthService, $rootScope) {
   var socket = null;
 
-  this.connect = function() {
+  function init() {
+    if (typeof io === 'undefined') return;
     if (socket) return;
-    socket = io();
-    socket.on('connect', function() { console.log('Socket.IO connected'); });
-    socket.on('disconnect', function() { console.log('Socket.IO disconnected'); });
-  };
+    
+    var token = AuthService.getToken();
+    if (!token) return;
 
-  this.on = function(event, callback) {
-    if (!socket) this.connect();
-    socket.on(event, function() {
-      var args = arguments;
-      $root.$apply(function() { callback.apply(socket, args); });
+    socket = io({ auth: { token: token } });
+
+    socket.on('connect', function() {
+      console.log('Socket connected');
     });
-  };
 
-  this.off = function(event) { if (socket) socket.off(event); };
-  this.emit = function(event, data) { if (socket) socket.emit(event, data); };
-  this.disconnect = function() { if (socket) { socket.disconnect(); socket = null; } };
+    socket.on('notification', function(data) {
+      $rootScope.$broadcast('notification:new', data);
+      // Let ToastService show it directly or through a toast controller, but we can emit a generic event
+      if ($rootScope.$$phase) {
+        $rootScope.$broadcast('toast:show', { message: data.title + ': ' + data.message, type: 'info' });
+      } else {
+        $rootScope.$apply(function() {
+          $rootScope.$broadcast('toast:show', { message: data.title + ': ' + data.message, type: 'info' });
+        });
+      }
+    });
+
+    socket.on('price_update', function(data) {
+      $rootScope.$broadcast('price:updated', data);
+    });
+
+    socket.on('stock_update', function(data) {
+      $rootScope.$broadcast('stock:updated', data);
+    });
+  }
+
+  return {
+    init: init,
+    disconnect: function() {
+      if (socket) { socket.disconnect(); socket = null; }
+    },
+    getSocket: function() { return socket; }
+  };
 }]);

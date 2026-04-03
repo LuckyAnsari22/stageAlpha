@@ -1,63 +1,105 @@
-<div class="main-content container mt-4">
-  <div class="flex-between mb-4 border-bottom pb-2 reveal">
-    <h1 class="font-display text-warning">Algorithmic Backtesting</h1>
-    <a href="#!/admin" class="label text-muted">&larr; Return to Command Center</a>
+<div class="page">
+  <div class="admin-tabs mb-5">
+    <a href="#!/admin" class="admin-tab">Dashboard</a>
+    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
+    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
+    <a href="#!/admin/backtest" class="admin-tab active">Backtest</a>
+    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
+    <a href="#!/admin/staff" class="admin-tab">Staff</a>
+    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
   </div>
 
-  <p class="font-mono text-secondary mb-4 reveal">
-    Evaluate the performance of the Lerner Index dynamic pricing engine against a static-price baseline over a historical temporal bound.
-  </p>
-
-  <div class="card reveal mb-5" style="border-left-color: var(--warning);">
-    <h4 class="font-serif mb-3">Initialize Simulation Bounds</h4>
-    <form name="backtestForm" ng-submit="runBacktest()" class="flex items-start gap-4">
-      <div class="form-group flex-1">
-        <label class="form-label">T-Zero (Start Date)</label>
-        <input type="date" class="form-control font-mono" ng-model="params.start_date" required>
-      </div>
-      <div class="form-group flex-1">
-        <label class="form-label">T-End (End Date)</label>
-        <input type="date" class="form-control font-mono" ng-model="params.end_date" required>
-      </div>
-      <div style="padding-top: 24px;">
-        <button type="submit" class="btn btn-primary" ng-disabled="backtestForm.$invalid || loading" style="background: var(--warning); border-color: var(--warning); color: var(--bg-base);">
-          {{loading ? '[ COMPUTING... ]' : 'EXECUTE RUN'}}
-        </button>
-      </div>
-    </form>
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Backtest Lab</h1>
+      <p class="page-sub">Compare algorithm pricing vs base pricing over historical periods</p>
+    </div>
   </div>
 
-  <div class="alert alert-danger mb-4 reveal" ng-show="error">
-    [ SIMULATION FAILED ] {{error}}
+  <!-- Date Picker -->
+  <div class="card mb-5">
+    <h4 class="mb-3">Run New Backtest</h4>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Period Start</label>
+        <input type="date" class="input" ng-model="backtest.startDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Period End</label>
+        <input type="date" class="input" ng-model="backtest.endDate">
+      </div>
+    </div>
+    <button class="btn btn-primary" ng-click="runBacktest()" ng-disabled="running || !backtest.startDate || !backtest.endDate">
+      {{running ? 'Running Simulation...' : 'Run Backtest'}}
+    </button>
   </div>
 
-  <div ng-show="results && !loading" class="reveal">
-    <h3 class="font-display mb-3">Simulation Telemetry</h3>
-    
-    <div class="grid grid-cols-3 mb-5">
-      <div class="card p-4">
-        <div class="label mb-1">Total Transactions Processed</div>
-        <div class="font-mono text-primary" style="font-size: 2rem;">{{results.total_bookings}}</div>
+  <!-- Results -->
+  <div ng-show="result">
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Bookings Analyzed</div>
+        <div class="kpi-value text-brand">{{result.n_bookings}}</div>
       </div>
-      <div class="card p-4">
-        <div class="label mb-1">Baseline Yield (Static)</div>
-        <div class="font-mono text-muted" style="font-size: 2rem;">&#x20B9;{{results.static_revenue | number:2}}</div>
+      <div class="kpi-card">
+        <div class="kpi-label">Base Revenue</div>
+        <div class="kpi-value text-2">₹{{result.actual_revenue | number:0}}</div>
       </div>
-      <div class="card p-4">
-        <div class="label mb-1">Dynamic Yield (Lerner Engine)</div>
-        <div class="font-mono text-gold" style="font-size: 2rem;">&#x20B9;{{results.dynamic_revenue | number:2}}</div>
+      <div class="kpi-card">
+        <div class="kpi-label">Algorithm Revenue</div>
+        <div class="kpi-value text-success">₹{{result.algorithm_revenue | number:0}}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Improvement</div>
+        <div class="kpi-value" ng-class="{'text-success': result.improvement_pct > 0, 'text-danger': result.improvement_pct < 0}">
+          {{result.improvement_pct > 0 ? '+' : ''}}{{result.improvement_pct | number:2}}%
+        </div>
       </div>
     </div>
 
-    <!-- Impact Block -->
-    <div class="card p-5 text-center mb-5" ng-class="{'border-success': results.improvement_pct > 0, 'border-danger': results.improvement_pct <= 0}">
-      <div class="label mb-2">Algorithmic Impact Factor</div>
-      <div class="font-mono" style="font-size: 3.5rem;" ng-class="{'text-success': results.improvement_pct > 0, 'text-danger': results.improvement_pct <= 0}">
-        {{results.improvement_pct > 0 ? '+' : ''}}{{results.improvement_pct}}%
+    <!-- Comparison Chart -->
+    <div class="chart-card mt-4">
+      <div class="chart-head">
+        <span class="heading-sm">Revenue Comparison</span>
+        <span class="label">Base vs Algorithm</span>
       </div>
-      <p class="text-muted mt-2 font-mono">
-         Result: The dynamic engine {{results.improvement_pct > 0 ? 'outperformed' : 'underperformed'}} the static baseline model.
-      </p>
+      <div class="chart-body">
+        <canvas id="backtestChart"></canvas>
+      </div>
     </div>
+  </div>
+
+  <!-- Historical Backtest Results -->
+  <div class="data-table-wrap mt-5" ng-show="historicalResults.length > 0">
+    <div class="data-table-head">
+      <span class="heading-sm">Historical Results</span>
+      <span class="label">Stored in backtest_results table</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Period</th>
+          <th>Bookings</th>
+          <th>Base Revenue</th>
+          <th>Algorithm Revenue</th>
+          <th>Improvement</th>
+          <th>Run Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="r in historicalResults">
+          <td class="text-1">{{r.period_start | date:'dd MMM'}} — {{r.period_end | date:'dd MMM yyyy'}}</td>
+          <td class="font-mono">{{r.n_bookings}}</td>
+          <td class="font-mono text-3">₹{{r.actual_revenue | number:0}}</td>
+          <td class="font-mono text-accent">₹{{r.algorithm_revenue | number:0}}</td>
+          <td>
+            <span class="font-mono" ng-class="{'text-success': r.improvement_pct > 0, 'text-danger': r.improvement_pct < 0}">
+              {{r.improvement_pct > 0 ? '+' : ''}}{{r.improvement_pct}}%
+            </span>
+          </td>
+          <td class="text-3">{{r.run_at | date:'dd MMM yyyy'}}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </div>

@@ -1,119 +1,89 @@
-angular.module('stageAlpha').controller('EquipmentDetailCtrl',
-['$scope', '$routeParams', 'ApiService', 'CartService', 'ToastService',
-function($scope, $routeParams, Api, Cart, Toast) {
-  $scope.equipment = null;
+'use strict';
+angular.module('stageAlpha')
+.controller('EquipmentDetailCtrl', ['$scope', '$routeParams', '$http', '$rootScope', 'AuthService', 'CartService', 'ToastService',
+function($scope, $routeParams, $http, $rootScope, AuthService, CartService, ToastService) {
   $scope.loading = true;
-  $scope.eventDate = '';
-  $scope.pricing = null;
-  $scope.loadingPrice = false;
+  $scope.error = false;
+  $scope.equipment = {};
   $scope.priceHistory = [];
+  $scope.reviews = [];
+  $scope.isLoggedIn = AuthService.isLoggedIn();
+  $scope.surgePct = 0;
 
-  var tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  $scope.minDate = tomorrow.toISOString().split('T')[0];
-
-  function loadDetail() {
-    Api.get('/equipment/' + $routeParams.id).then(function(res) {
-      $scope.equipment = res.data.data;
-      loadPriceHistory();
-      loadReviews();
-    }).catch(function() {
-      Toast.error('Equipment not found');
-    }).finally(function() {
-      $scope.loading = false;
-    });
-  }
-
-  function loadReviews() {
-    $scope.reviews = [];
-    Api.get('/equipment/' + $routeParams.id + '/reviews').then(function(res) {
-      $scope.reviews = res.data.data;
-    });
-  }
-
-  function loadPriceHistory() {
-    Api.get('/equipment/' + $routeParams.id + '/price-history').then(function(res) {
-      $scope.priceHistory = res.data.data;
-      $scope.initChart();
-    });
-  }
-
-  $scope.calculatePrice = function() {
-    if (!$scope.eventDate) return;
-    $scope.loadingPrice = true;
-    $scope.pricing = null;
-    Api.get('/equipment/' + $routeParams.id + '/price?event_date=' + $scope.eventDate)
-      .then(function(res) {
-        $scope.pricing = res.data.data;
-      })
-      .catch(function(err) {
-        Toast.error('Pricing error: ' + (err.data?.message || 'Calculation failed'));
-      })
-      .finally(function() {
-        $scope.loadingPrice = false;
-      });
+  var catMap = {
+    'PA Systems':      { icon: '🔊', cls: 'cat-sound' },
+    'DJ Equipment':    { icon: '🎧', cls: 'cat-dj' },
+    'Stage Lighting':  { icon: '💡', cls: 'cat-light' },
+    'Microphones':     { icon: '🎤', cls: 'cat-mic' },
+    'Cables & Stands': { icon: '🔌', cls: 'cat-cable' }
   };
+  $scope.getCatClass = function(n) { return (catMap[n] || {}).cls || 'cat-default'; };
+  $scope.getCatIcon = function(n) { return (catMap[n] || {}).icon || '🎵'; };
+
+  var eqId = $routeParams.id;
+
+  // Load equipment detail
+  $http.get('/api/v1/equipment/' + eqId).then(function(res) {
+    $scope.equipment = res.data.data || res.data;
+    $scope.surgePct = (($scope.equipment.current_price - $scope.equipment.base_price) / $scope.equipment.base_price * 100);
+    $scope.loading = false;
+
+    // Load price history
+    $http.get('/api/v1/pricing/history/' + eqId).then(function(res2) {
+      $scope.priceHistory = res2.data.data || res2.data || [];
+      if ($scope.priceHistory.length > 0) {
+        setTimeout(function() { renderPriceChart(); }, 100);
+      }
+    }).catch(function() {});
+
+    // Load reviews
+    $http.get('/api/v1/equipment/' + eqId + '/reviews').then(function(res3) {
+      $scope.reviews = res3.data.data || res3.data || [];
+    }).catch(function() {});
+  }).catch(function() {
+    $scope.loading = false;
+    $scope.error = true;
+  });
 
   $scope.addToCart = function() {
-    if (!$scope.equipment) return;
-    var priceToUse = ($scope.pricing && $scope.pricing.final_optimal_price) 
-        ? parseFloat($scope.pricing.final_optimal_price) 
-        : parseFloat($scope.equipment.current_price);
-    
-    var item = Object.assign({}, $scope.equipment, { algorithm_price: priceToUse });
-    Cart.add(item, 1);
-    
-    if ($scope.eventDate) {
-      Cart.setEventDate($scope.eventDate);
-    }
-    
-    Toast.success($scope.equipment.name + ' added to booking');
+    CartService.add($scope.equipment);
+    $rootScope.$broadcast('cart:updated');
+    ToastService.show($scope.equipment.name + ' added to cart', 'success');
   };
 
-  $scope.isInCart = function() {
-    return $scope.equipment && Cart.has($scope.equipment.id);
-  };
+  function renderPriceChart() {
+    var ctx = document.getElementById('priceChart');
+    if (!ctx) return;
+    var labels = $scope.priceHistory.map(function(p) {
+      return new Date(p.changed_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+    });
+    var data = $scope.priceHistory.map(function(p) { return parseFloat(p.new_price); });
 
-  $scope.initChart = function() {
-    if (!$scope.priceHistory || $scope.priceHistory.length === 0) return;
-    
-    // Defer chart init to ensure DOM canvas mounts
-    setTimeout(function() {
-      var ctx = document.getElementById('priceHistoryChart');
-      if (!ctx) return;
-      
-      var dataRows = angular.copy($scope.priceHistory).reverse();
-      var chartLabels = dataRows.map(function(r) { return new Date(r.changed_at).toLocaleDateString(undefined, {month:'short', day:'numeric'}); });
-      var chartData = dataRows.map(function(r) { return r.new_price; });
-
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartLabels,
-          datasets: [{
-            label: 'Algo Price',
-            data: chartData,
-            borderColor: '#7c6ff7',
-            backgroundColor: 'transparent',
-            pointBackgroundColor: '#7c6ff7',
-            pointBorderColor: '#080810',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { grid: { color: '#252538' }, ticks: { color: '#9090b0', callback: function(v) { return '₹' + v; } } },
-            x: { grid: { display: false }, ticks: { color: '#9090b0', maxTicksLimit: 6 } }
-          },
-          plugins: { legend: { display: false }, tooltip: { backgroundColor: '#171726', titleColor: '#eeeef8', bodyColor: '#7c6ff7' } }
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Price (₹)',
+          data: data,
+          borderColor: '#6c63ff',
+          backgroundColor: 'rgba(108,99,255,0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#6c63ff',
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(240,240,245,0.4)', font: { size: 11 } } },
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(240,240,245,0.4)', font: { size: 11 }, callback: function(v) { return '₹' + v; } } }
         }
-      });
-    }, 50);
-  };
-
-  loadDetail();
+      }
+    });
+  }
 }]);

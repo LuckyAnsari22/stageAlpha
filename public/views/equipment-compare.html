@@ -1,0 +1,63 @@
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Compare Equipment</h1>
+      <p class="page-sub">Side-by-side comparison of selected items</p>
+    </div>
+    <a href="#!/equipment" class="btn btn-outline btn-sm">← Back to Catalog</a>
+  </div>
+
+  <div class="empty-state" ng-show="!compareItems || compareItems.length === 0">
+    <div class="empty-state-icon">⚖️</div>
+    <h3>No items to compare</h3>
+    <p>Select equipment from the catalog to compare.</p>
+    <a href="#!/equipment" class="btn btn-primary mt-3">Browse Equipment</a>
+  </div>
+
+  <div ng-show="compareItems && compareItems.length > 0">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:180px;">Feature</th>
+          <th ng-repeat="item in compareItems">{{item.name}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Category</td>
+          <td ng-repeat="item in compareItems"><span class="badge badge-brand">{{item.category_name}}</span></td>
+        </tr>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Base Price</td>
+          <td ng-repeat="item in compareItems" class="font-mono text-3">₹{{item.base_price | number:0}}</td>
+        </tr>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Current Price</td>
+          <td ng-repeat="item in compareItems" class="font-mono text-accent" style="font-size:1.1rem; font-weight:600;">₹{{item.current_price | number:0}}</td>
+        </tr>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Price Change</td>
+          <td ng-repeat="item in compareItems">
+            <span class="font-mono" ng-class="{'text-success': item.current_price >= item.base_price, 'text-danger': item.current_price < item.base_price}">
+              {{((item.current_price - item.base_price) / item.base_price * 100) | number:1}}%
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Stock</td>
+          <td ng-repeat="item in compareItems">
+            <span class="stock-pill" ng-class="{'stock-ok': item.stock_qty > 3, 'stock-low': item.stock_qty > 0 && item.stock_qty <= 3, 'stock-out': item.stock_qty <= 0}">
+              {{item.stock_qty}}
+            </span>
+          </td>
+        </tr>
+        <tr>
+          <td class="text-3 text-upper" style="font-size:0.75rem;">Actions</td>
+          <td ng-repeat="item in compareItems">
+            <button class="btn btn-primary btn-sm" ng-click="addToCart(item)" ng-disabled="item.stock_qty <= 0">Add to Cart</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

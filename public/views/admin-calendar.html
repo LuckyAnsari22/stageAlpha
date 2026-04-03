@@ -1,0 +1,58 @@
+<div class="page">
+  <div class="admin-tabs mb-5">
+    <a href="#!/admin" class="admin-tab">Dashboard</a>
+    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
+    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
+    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
+    <a href="#!/admin/calendar" class="admin-tab active">Calendar</a>
+    <a href="#!/admin/staff" class="admin-tab">Staff</a>
+    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Booking Calendar</h1>
+      <p class="page-sub">{{currentMonth}} {{currentYear}} — {{monthBookings.length}} bookings</p>
+    </div>
+    <div class="flex gap-2">
+      <button class="btn btn-ghost btn-sm" ng-click="prevMonth()">← Prev</button>
+      <button class="btn btn-outline btn-sm" ng-click="goToToday()">Today</button>
+      <button class="btn btn-ghost btn-sm" ng-click="nextMonth()">Next →</button>
+    </div>
+  </div>
+
+  <!-- Calendar Grid -->
+  <div class="card p-4">
+    <div class="calendar-grid">
+      <div class="calendar-header" ng-repeat="day in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']">{{day}}</div>
+      <div class="calendar-day" ng-repeat="d in calendarDays"
+           ng-class="{'today': d.isToday, 'has-events': d.bookingCount > 0}"
+           ng-click="selectDay(d)"
+           ng-style="{'opacity': d.otherMonth ? 0.3 : 1}">
+        <span>{{d.day}}</span>
+        <div ng-show="d.bookingCount > 0" style="margin-top:2px;">
+          <span class="badge badge-brand" style="font-size:0.6rem; padding:1px 4px;">{{d.bookingCount}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected Day Bookings -->
+  <div class="mt-5" ng-show="selectedDay && selectedDayBookings.length > 0">
+    <h3 class="mb-3">Bookings on {{selectedDay | date:'dd MMM yyyy'}}</h3>
+    <div class="bookings-grid">
+      <div class="booking-card" ng-repeat="b in selectedDayBookings">
+        <div class="booking-top">
+          <div class="flex items-center gap-3">
+            <span class="booking-id-label">#{{b.booking_id}}</span>
+            <span class="status-chip" ng-class="b.status">{{b.status}}</span>
+          </div>
+          <div class="booking-total">₹{{b.total_price | number:0}}</div>
+        </div>
+        <div class="booking-dates">
+          {{b.customer_name}} · {{b.event_type}} · {{b.venue_name || 'No venue'}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,46 +1,33 @@
-angular.module('stageAlpha').controller('BookingStatusCtrl',
-['$scope', '$routeParams', '$interval', 'ApiService', 'SocketService', 'ToastService',
-function($scope, $routeParams, $interval, Api, Socket, Toast) {
-  $scope.booking = null;
+'use strict';
+angular.module('stageAlpha')
+.controller('BookingStatusCtrl', ['$scope', '$routeParams', '$http', '$location', 'ToastService',
+function($scope, $routeParams, $http, $location, ToastService) {
   $scope.loading = true;
-  var timer;
+  $scope.error = false;
+  $scope.booking = {};
+  $scope.items = [];
+  $scope.payment = null;
 
-  function loadBooking() {
-    Api.get('/bookings/' + $routeParams.id).then(function(res) {
-      $scope.booking = res.data.data;
+  var id = $routeParams.id;
+
+  $http.get('/api/v1/bookings/' + id).then(function(res) {
+    var data = res.data.data || res.data;
+    $scope.booking = data;
+    $scope.items = data.items || [];
+    $scope.payment = data.payment || null;
+    $scope.loading = false;
+  }).catch(function() {
+    $scope.loading = false;
+    $scope.error = true;
+  });
+
+  $scope.cancelBooking = function() {
+    if (!confirm('Are you sure you want to cancel this booking?')) return;
+    $http.patch('/api/v1/bookings/' + id, { status: 'cancelled' }).then(function() {
+      $scope.booking.status = 'cancelled';
+      ToastService.show('Booking cancelled', 'success');
     }).catch(function() {
-      Toast.error('Booking not found or access denied');
-    }).finally(function() {
-      $scope.loading = false;
+      ToastService.show('Failed to cancel booking', 'error');
     });
-  }
-
-  $scope.statusClass = function(status) {
-    if (status === 'completed') return 'badge-success';
-    if (status === 'confirmed') return 'badge-accent';
-    if (status === 'cancelled') return 'badge-danger';
-    return 'badge-warning'; // pending
   };
-
-  loadBooking();
-
-  // Polling fallback
-  timer = $interval(function() {
-    if ($scope.booking && ($scope.booking.status === 'pending' || $scope.booking.status === 'confirmed')) {
-      loadBooking();
-    }
-  }, 30000); 
-
-  // Socket driven live-push if admin acts
-  Socket.on('booking:updated', function(data) {
-    if ($scope.booking && $scope.booking.booking_id == data.id) {
-       $scope.booking.status = data.status;
-       Toast.info('Booking status updated to ' + data.status);
-    }
-  });
-
-  $scope.$on('$destroy', function() {
-    if (timer) $interval.cancel(timer);
-    Socket.off('booking:updated');
-  });
 }]);
