@@ -32,15 +32,22 @@ angular.module('stageAlpha', ['ngRoute'])
 .run(['$rootScope', '$location', 'AuthService', 'CartService', function($rootScope, $location, AuthService, CartService) {
   // Route guard
   $rootScope.$on('$routeChangeStart', function(evt, next) {
-    $rootScope.pageTitle = next.title || 'StageAlpha';
-    if (next.requireAuth && !AuthService.isLoggedIn()) {
-      $location.path('/login');
-    }
-    if (next.requireAdmin && !AuthService.isAdmin()) {
-      $location.path('/');
-    }
-    if (next.redirectIfAuth && AuthService.isLoggedIn()) {
-      $location.path('/');
+    if (next && next.$$route) {
+      $rootScope.pageTitle = next.$$route.title || 'StageAlpha';
+      var requireAuth = next.$$route.requireAuth;
+      var requireAdmin = next.$$route.requireAdmin;
+      var redirectIfAuth = next.$$route.redirectIfAuth;
+      
+      if (requireAuth && !AuthService.isLoggedIn()) {
+        evt.preventDefault();
+        $location.path('/login');
+      } else if (requireAdmin && !AuthService.isAdmin()) {
+        evt.preventDefault();
+        $location.path('/');
+      } else if (redirectIfAuth && AuthService.isLoggedIn()) {
+        evt.preventDefault();
+        $location.path('/');
+      }
     }
   });
 
@@ -56,9 +63,9 @@ angular.module('stageAlpha', ['ngRoute'])
   });
 }])
 
-// $http interceptor — attaches JWT to every request, handles 401
+// $http interceptor — attaches JWT to every request, handles 401/403
 .config(['$httpProvider', function($httpProvider) {
-  $httpProvider.interceptors.push(['$window', '$q', function($window, $q) {
+  $httpProvider.interceptors.push(['$window', '$q', '$location', function($window, $q, $location) {
     return {
       request: function(config) {
         var token = $window.localStorage.getItem('sa_access_token');
@@ -68,7 +75,11 @@ angular.module('stageAlpha', ['ngRoute'])
       responseError: function(rejection) {
         if (rejection.status === 401) {
           $window.localStorage.removeItem('sa_access_token');
+          $window.localStorage.removeItem('sa_user');
           $window.location.href = '#!/login';
+        } else if (rejection.status === 403) {
+          // Unauthorized access - redirect to home
+          $window.location.href = '#!/';
         }
         return $q.reject(rejection);
       }

@@ -196,7 +196,7 @@ router.post('/refresh', (req, res, next) => {
 
     // Issue new access_token only
     const access_token = jwt.sign(
-      { id: decoded.id },
+      { id: decoded.id, role: decoded.role },
       config.jwt.secret,
       { expiresIn: config.jwt.accessExpiry }
     );
@@ -230,12 +230,12 @@ router.get('/me', authenticate, (req, res) => {
 // Helper functions at bottom
 function generateTokens(user) {
   const access_token = jwt.sign(
-    { id: user.id }, 
+    { id: user.id, role: user.role }, 
     config.jwt.secret, 
     { expiresIn: config.jwt.accessExpiry }
   );
   const refresh_token = jwt.sign(
-    { id: user.id }, 
+    { id: user.id, role: user.role }, 
     config.jwt.refreshSecret, 
     { expiresIn: config.jwt.refreshExpiry }
   );
