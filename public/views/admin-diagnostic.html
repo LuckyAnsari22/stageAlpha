@@ -1,0 +1,54 @@
+<!-- ADMIN DIAGNOSTIC PAGE -->
+<div ng-controller="AdminDiagnosticCtrl" style="padding: 24px; color: white; font-family: monospace;">
+  
+  <h2 style="margin-bottom: 20px;">🔧 Admin Interface Diagnostics</h2>
+
+  <div ng-show="error" style="background: #ff3333; padding: 12px; border-radius: 6px; margin-bottom: 20px;">
+    ❌ {{error}}
+  </div>
+
+  <div style="background: rgba(108, 99, 255, 0.1); padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #6c63ff;">
+    <strong>Auth Status:</strong> {{diagnostics.authStatus}}
+  </div>
+
+  <h3 style="margin: 20px 0 10px 0;">API Tests</h3>
+  <button ng-click="runTests()" ng-disabled="testing" style="padding: 10px 16px; background: #6c63ff; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    {{testing ? 'Running Tests...' : 'Run Tests'}}
+  </button>
+
+  <div style="margin-top: 20px;">
+    <div ng-repeat="test in diagnostics.tests" style="margin-bottom: 12px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 6px; border-left: 3px solid" ng-style="{'border-left-color': test.status === 'SUCCESS' ? '#00ff00' : '#ff3333'}">
+      
+      <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+        <strong>{{test.name}}</strong>
+        <span style="color" ng-style="{'color': test.status === 'SUCCESS' ? '#00ff00' : '#ff3333'}">
+          {{test.status}} ({{test.statusCode}})
+        </span>
+      </div>
+
+      <div ng-if="test.status === 'SUCCESS'" style="background: rgba(0,255,0,0.1); padding: 8px; border-radius: 4px; overflow: auto; max-height: 200px;">
+        <pre style="margin: 0; font-size: 11px;">{{test.data | json}}</pre>
+      </div>
+
+      <div ng-if="test.status === 'FAILED'" style="background: rgba(255,51,51,0.1); padding: 8px; border-radius: 4px; color: #ff9999; overflow: auto; max-height: 200px;">
+        <pre style="margin: 0; font-size: 11px;">{{test.error | json}}</pre>
+      </div>
+
+    </div>
+  </div>
+
+  <h3 style="margin: 20px 0 10px 0;">Browser Info</h3>
+  <div style="background: rgba(0,0,0,0.3); padding: 12px; border-radius: 6px; font-size: 12px;">
+    <div>User Agent: {{$root.browserAgent || 'Check console'}}</div>
+    <div>Timestamp: {{now | date:'medium'}}</div>
+  </div>
+
+  <h3 style="margin: 20px 0 10px 0;">Next Steps</h3>
+  <ul style="line-height: 1.8;">
+    <li ng-if="diagnostics.tests[0].status === 'FAILED'">❌ Dashboard API is failing - check server logs</li>
+    <li ng-if="diagnostics.tests[1].status === 'FAILED'">❌ Bookings API is failing - check server logs</li>
+    <li ng-if="diagnostics.tests[2].status === 'FAILED'">❌ Equipment API is failing - check server logs</li>
+    <li ng-if="diagnostics.tests[0].status === 'SUCCESS' && diagnostics.tests[1].status === 'SUCCESS' && diagnostics.tests[2].status === 'SUCCESS'">✅ All APIs are working! Issues may be with controller logic.</li>
+  </ul>
+
+</div>
