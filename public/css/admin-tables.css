@@ -326,6 +326,18 @@
   color: var(--admin-text-muted);
 }
 
+/* Select options styling */
+.form-select option {
+  background: var(--admin-dark-bg);
+  color: var(--admin-text);
+  padding: 8px;
+}
+
+.form-select option:checked {
+  background: linear-gradient(135deg, var(--admin-primary), var(--admin-accent));
+  color: white;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
