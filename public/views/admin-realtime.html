@@ -1,0 +1,129 @@
+<div class="admin-realtime-dashboard">
+  <!-- Header with Connection Status -->
+  <div class="dashboard-header">
+    <h1>📊 Live Admin Dashboard</h1>
+    <div class="header-controls">
+      <div class="connection-status" ng-class="connectionStatus">
+        <span class="status-dot"></span>
+        {{ connectionStatus | uppercase }}
+      </div>
+      <div class="admin-info">
+        <span class="admin-count">👥 {{ adminCount }} admin{{ adminCount !== 1 ? 's' : '' }} online</span>
+      </div>
+      <button class="btn btn-secondary" ng-click="refreshDashboard()" ng-disabled="isLoading">
+        <span ng-if="!isLoading">🔄 Refresh</span>
+        <span ng-if="isLoading">Loading...</span>
+      </button>
+      <span class="last-update" ng-if="lastUpdateTime">Last update: {{ lastUpdateTime }}</span>
+    </div>
+  </div>
+
+  <!-- KPI Cards with Real-Time Updates -->
+  <div class="kpi-grid" ng-class="{'pulse': pulseAnimation}">
+    <div class="kpi-card kpi-bookings">
+      <div class="kpi-icon">📅</div>
+      <div class="kpi-content">
+        <div class="kpi-label">Today's Bookings</div>
+        <div class="kpi-value">{{ stats.today_bookings || 0 }}</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-pending">
+      <div class="kpi-icon">⏳</div>
+      <div class="kpi-content">
+        <div class="kpi-label">Pending Bookings</div>
+        <div class="kpi-value warning" ng-if="stats.pending_bookings > 0">{{ stats.pending_bookings }}</div>
+        <div class="kpi-value" ng-if="stats.pending_bookings === 0">0</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-stock">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-content">
+        <div class="kpi-label">Low Stock Items</div>
+        <div class="kpi-value danger" ng-if="stats.low_stock_items > 0">{{ stats.low_stock_items }}</div>
+        <div class="kpi-value" ng-if="stats.low_stock_items === 0">0</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-customers">
+      <div class="kpi-icon">👤</div>
+      <div class="kpi-content">
+        <div class="kpi-label">Active Customers</div>
+        <div class="kpi-value">{{ stats.active_customers_today || 0 }}</div>
+      </div>
+    </div>
+
+    <div class="kpi-card kpi-revenue">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-content">
+        <div class="kpi-label">Today's Revenue</div>
+        <div class="kpi-value success">₹{{ (stats.today_revenue || 0) | number:0 }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Bookings Live Feed -->
+  <div class="recent-bookings-section">
+    <h2>🔴 Live Booking Feed</h2>
+    <div class="bookings-container" ng-if="recentBookings.length > 0">
+      <div class="booking-item" ng-repeat="booking in recentBookings" ng-class="getStatusClass(booking.status)">
+        <div class="booking-header">
+          <span class="booking-id">#{{ booking.id }}</span>
+          <span class="booking-status">{{ booking.status | uppercase }}</span>
+          <span class="booking-time">{{ booking.created_at | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="booking-details">
+          <div class="detail">
+            <strong>Customer:</strong> {{ booking.customer_name }}
+          </div>
+          <div class="detail">
+            <strong>Event Date:</strong> {{ booking.event_date | date:'MMM dd, yyyy' }}
+          </div>
+          <div class="detail">
+            <strong>Amount:</strong> <span class="amount">₹{{ booking.total_price | number:0 }}</span>
+          </div>
+        </div>
+        <div class="booking-actions">
+          <button class="btn btn-small btn-success" ng-if="booking.status === 'pending'" ng-click="confirmBooking(booking)">
+            ✓ Confirm
+          </button>
+          <button class="btn btn-small btn-danger" ng-if="booking.status !== 'cancelled' && booking.status !== 'completed'" ng-click="cancelBooking(booking)">
+            ✗ Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="no-data" ng-if="recentBookings.length === 0">
+      No recent bookings
+    </div>
+  </div>
+
+  <!-- Inventory Status -->
+  <div class="inventory-section">
+    <h2>📦 Equipment Inventory Status</h2>
+    <div class="inventory-grid">
+      <div class="inventory-item" ng-repeat="item in inventory" ng-class="getStockClass(item.stock_qty)">
+        <div class="item-header">
+          <h4>{{ item.name }}</h4>
+          <span class="stock-badge">{{ item.stock_qty }}</span>
+        </div>
+        <div class="item-details">
+          <div class="price">₹{{ item.current_price | number:0 }}</div>
+          <div class="status-bar">
+            <div class="status-fill" style="width: {{ (item.stock_qty / 10) * 100 }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="no-data" ng-if="inventory.length === 0">
+      Loading inventory...
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" ng-if="isLoading">
+    <div class="spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+</div>

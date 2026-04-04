@@ -15,7 +15,8 @@ angular.module('stageAlpha', ['ngRoute'])
     .when('/packages', { templateUrl: '/views/packages.html', controller: 'PackagesCtrl', title: 'Event Packages' })
     .when('/packages/:slug', { templateUrl: '/views/package-detail.html', controller: 'PackageDetailCtrl', title: 'Package Details' })
     .when('/availability', { templateUrl: '/views/availability.html', controller: 'AvailabilityCtrl', title: 'Check Availability' })
-    .when('/admin', { templateUrl: '/views/admin.html', controller: 'AdminCtrl', title: 'Admin Dashboard', requireAdmin: true })
+    .when('/admin', { templateUrl: '/views/admin-realtime.html', controller: 'AdminRealtimeCtrl', title: 'Live Admin Dashboard', requireAdmin: true })
+    .when('/admin/classic', { templateUrl: '/views/admin.html', controller: 'AdminCtrl', title: 'Classic Dashboard', requireAdmin: true })
     .when('/admin/pricing', { templateUrl: '/views/pricing.html', controller: 'PricingCtrl', title: 'Pricing Engine', requireAdmin: true })
     .when('/admin/backtest', { templateUrl: '/views/backtest.html', controller: 'BacktestCtrl', title: 'Backtest', requireAdmin: true })
     .when('/admin/calendar', { templateUrl: '/views/admin-calendar.html', controller: 'AdminCalendarCtrl', title: 'Booking Calendar', requireAdmin: true })
@@ -29,7 +30,7 @@ angular.module('stageAlpha', ['ngRoute'])
     .otherwise({ redirectTo: '/' });
 }])
 
-.run(['$rootScope', '$location', 'AuthService', 'CartService', function($rootScope, $location, AuthService, CartService) {
+.run(['$rootScope', '$location', 'AuthService', 'CartService', 'SocketService', function($rootScope, $location, AuthService, CartService, SocketService) {
   // Route guard
   $rootScope.$on('$routeChangeStart', function(evt, next) {
     if (next && next.$$route) {
@@ -56,6 +57,11 @@ angular.module('stageAlpha', ['ngRoute'])
   $rootScope.isLoggedIn  = AuthService.isLoggedIn();
   $rootScope.isAdmin     = AuthService.isAdmin();
   $rootScope.cartCount   = CartService.count();
+
+  // Initialize WebSocket for real-time updates
+  if ($rootScope.isLoggedIn) {
+    SocketService.init();
+  }
 
   // Cart count watcher
   $rootScope.$on('cart:updated', function() {
