@@ -131,11 +131,13 @@ function($scope, $http, ToastService) {
     
     if (!$scope.form.name || $scope.form.name.trim() === '') {
       ToastService.show('Please enter equipment name', 'error');
+      console.warn('[Inventory] Validation failed: name is empty');
       return;
     }
 
     if (!$scope.form.category || $scope.form.category.trim() === '') {
       ToastService.show('Please select a category', 'error');
+      console.warn('[Inventory] Validation failed: category is empty', { category: $scope.form.category });
       return;
     }
 
@@ -145,9 +147,10 @@ function($scope, $http, ToastService) {
     var url = isNew ? '/api/v1/equipment' : '/api/v1/equipment/' + $scope.form.id;
     
     // Map form fields to API fields
+    var categoryId = getCategoryId($scope.form.category);
     var apiData = {
       name: $scope.form.name,
-      category_id: getCategoryId($scope.form.category),  // Convert category string to ID
+      category_id: categoryId,
       description: $scope.form.description || '',
       base_price: parseInt($scope.form.price_per_day) || 0,
       current_price: parseInt($scope.form.price_per_day) || 0,
@@ -159,7 +162,10 @@ function($scope, $http, ToastService) {
       is_active: true
     };
     
-    console.log('[Inventory] Saving:', method, url, 'Data:', apiData);
+    console.log('[Inventory] Form:', $scope.form);
+    console.log('[Inventory] Category ID mapped:', categoryId, 'from:', $scope.form.category);
+    console.log('[Inventory] Saving:', method, url);
+    console.log('[Inventory] API Data:', JSON.stringify(apiData, null, 2));
     
     $http({
       method: method,
@@ -178,8 +184,9 @@ function($scope, $http, ToastService) {
         $scope.isSaving = false;
         var msg = 'Failed to save equipment';
         if (error.data && error.data.message) msg += ': ' + error.data.message;
-        if (error.status === 400) msg = 'Invalid data: Check all required fields';
-        if (error.status === 500) msg = 'Server error: Check category ID';
+        if (error.status === 400) msg = 'Invalid data: ' + (error.data && error.data.message ? error.data.message : 'Check all required fields');
+        if (error.status === 500) msg = 'Server error: ' + (error.data && error.data.message ? error.data.message : 'Check category ID');
+        console.error('[Inventory] Error details:', { status: error.status, message: error.data });
         ToastService.show(msg, 'error');
       });
   };
