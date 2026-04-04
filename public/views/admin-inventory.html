@@ -1,0 +1,167 @@
+<!-- ADMIN INVENTORY MANAGEMENT -->
+<div ng-controller="AdminInventoryCtrl" class="admin-inventory">
+  
+  <!-- HEADER WITH ACTIONS -->
+  <div class="inventory-header">
+    <h2>Equipment Inventory</h2>
+    <div class="header-actions">
+      <button class="btn btn-primary" ng-click="openAddModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add Equipment
+      </button>
+      <button class="btn btn-secondary" ng-click="refreshInventory()" ng-disabled="isLoading">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6"></path>
+          <path d="M1 20v-6h6"></path>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div ng-show="isLoading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading inventory...</p>
+  </div>
+
+  <!-- INVENTORY GRID -->
+  <div ng-hide="isLoading" class="inventory-grid">
+    <div ng-if="equipment.length > 0">
+      <div ng-repeat="item in equipment" class="equipment-card" ng-class="{'low-stock': isLowStock(item)}">
+        <div class="card-header">
+          <h3>{{item.name}}</h3>
+          <span class="category-tag">{{item.category}}</span>
+        </div>
+
+        <div class="card-body">
+          <p class="description">{{item.description}}</p>
+
+          <!-- Stock Info -->
+          <div class="stock-info">
+            <div class="stock-level">
+              <span class="label">Stock:</span>
+              <span class="value" ng-style="{'color': getStockColor(item)}">{{item.quantity}} units</span>
+            </div>
+            <div class="stock-bar">
+              <div class="bar-fill" ng-style="{'width': (item.quantity / 20 * 100) + '%', 'background': getStockColor(item)}"></div>
+            </div>
+            <div ng-if="isLowStock(item)" class="low-stock-alert">
+              ⚠ Low Stock - Consider restocking
+            </div>
+          </div>
+
+          <!-- Pricing -->
+          <div class="pricing">
+            <span class="price">₹{{item.price_per_day | number:0}}/day</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn-small view" ng-click="viewItem(item)" title="View">👁</button>
+          <button class="btn-small edit" ng-click="editItem(item); showModal = true" title="Edit">✎</button>
+          <button class="btn-small delete" ng-click="deleteItem(item)" title="Delete">🗑</button>
+        </div>
+      </div>
+    </div>
+
+    <div ng-if="equipment.length === 0" class="empty-state">
+      <p>No equipment in inventory</p>
+      <button class="btn btn-primary" ng-click="openAddModal()">Add Equipment</button>
+    </div>
+  </div>
+
+  <!-- ADD/EDIT MODAL -->
+  <div ng-show="showModal" class="modal-overlay" ng-click="closeModal()">
+    <div class="modal" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>{{isEditing ? (selectedItem ? 'Edit Equipment' : 'Add Equipment') : 'Equipment Details'}}</h3>
+        <button class="close-btn" ng-click="closeModal()">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div ng-if="!isEditing && selectedItem" class="view-mode">
+          <div class="info-section">
+            <h4>Equipment Information</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Name</span>
+                <span class="value">{{selectedItem.name}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Category</span>
+                <span class="value">{{selectedItem.category}}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Price</span>
+                <span class="value">₹{{selectedItem.price_per_day | number:0}}/day</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Stock</span>
+                <span class="value" ng-style="{'color': getStockColor(selectedItem)}">{{selectedItem.quantity}} units</span>
+              </div>
+            </div>
+          </div>
+          <div class="info-section">
+            <h4>Description</h4>
+            <p>{{selectedItem.description}}</p>
+          </div>
+        </div>
+
+        <form ng-if="isEditing" class="form">
+          <div class="form-group">
+            <label>Equipment Name</label>
+            <input type="text" ng-model="form.name" placeholder="e.g., JBL PA System" class="form-input">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <select ng-model="form.category" class="form-select">
+                <option value="">Select Category</option>
+                <option ng-repeat="cat in categories" value="{{cat}}">{{cat}}</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Price per Day (₹)</label>
+              <input type="number" ng-model="form.price_per_day" placeholder="0" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Quantity</label>
+              <input type="number" ng-model="form.quantity" placeholder="0" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label>Low Stock Threshold</label>
+              <input type="number" ng-model="form.low_stock_threshold" placeholder="5" class="form-input">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Description</label>
+            <textarea ng-model="form.description" placeholder="Equipment description..." class="form-textarea" rows="3"></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button ng-if="isEditing" class="btn btn-primary" ng-click="saveItem()">
+          {{selectedItem ? 'Update' : 'Add'}} Equipment
+        </button>
+        <button ng-if="!isEditing" class="btn btn-primary" ng-click="editItem()">Edit</button>
+        <button class="btn btn-secondary" ng-click="closeModal()">
+          {{isEditing ? 'Cancel' : 'Close'}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

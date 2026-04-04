@@ -1,0 +1,193 @@
+<!-- ADMIN BOOKINGS MANAGEMENT -->
+<div ng-controller="AdminBookingsCtrl" class="admin-bookings">
+  
+  <!-- HEADER WITH ACTIONS -->
+  <div class="bookings-header">
+    <h2>Booking Management</h2>
+    <button class="btn btn-primary" ng-click="refreshBookings()" ng-disabled="isLoading">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 4v6h-6"></path>
+        <path d="M1 20v-6h6"></path>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filter-section">
+    <div class="filter-group">
+      <input type="text" ng-model="filters.search" placeholder="Search by ID or customer..." class="filter-input">
+      <select ng-model="filters.status" class="filter-select">
+        <option value="">All Status</option>
+        <option ng-repeat="status in statusOptions" value="{{status}}">{{status | uppercase}}</option>
+      </select>
+      <button class="btn btn-primary" ng-click="applyFilters()">Filter</button>
+      <button class="btn btn-secondary" ng-click="clearFilters()">Clear</button>
+    </div>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div ng-show="isLoading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p>Loading bookings...</p>
+  </div>
+
+  <!-- BOOKINGS TABLE -->
+  <div ng-hide="isLoading" class="bookings-table-container">
+    <div ng-if="bookings.length > 0">
+      <table class="bookings-table">
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Event Date</th>
+            <th>Booked On</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="booking in bookings | orderBy:sortBy:sortDesc" ng-class="'status-' + booking.status">
+            <td class="booking-id">
+              <span class="mono">{{booking.id | limitTo:8}}</span>
+            </td>
+            <td class="customer-name">
+              <strong>{{booking.customer_name}}</strong>
+              <br>
+              <small>{{booking.customer_email}}</small>
+            </td>
+            <td class="amount">
+              <strong>₹{{booking.total_price | number:0}}</strong>
+            </td>
+            <td>
+              <span class="badge" ng-class="'status-' + booking.status">{{booking.status}}</span>
+            </td>
+            <td class="date">{{booking.event_date | date:'MMM dd, yyyy'}}</td>
+            <td class="date">{{booking.created_at | date:'MMM dd, hh:mm a'}}</td>
+            <td class="actions">
+              <button class="action-btn confirm" ng-if="booking.status === 'pending'" 
+                      ng-click="confirmBooking(booking)" title="Confirm">
+                ✓
+              </button>
+              <button class="action-btn complete" ng-if="booking.status === 'confirmed'" 
+                      ng-click="completeBooking(booking)" title="Complete">
+                ✓
+              </button>
+              <button class="action-btn cancel" ng-if="booking.status !== 'completed' && booking.status !== 'cancelled'" 
+                      ng-click="cancelBooking(booking)" title="Cancel">
+                ✕
+              </button>
+              <button class="action-btn view" ng-click="viewBooking(booking)" title="View Details">
+                👁
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div ng-if="bookings.length === 0" class="empty-state">
+      <p>No bookings found</p>
+    </div>
+  </div>
+
+  <!-- DETAIL MODAL -->
+  <div ng-show="showModal" class="modal-overlay" ng-click="closeModal()">
+    <div class="modal" ng-click="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Booking Details</h3>
+        <button class="close-btn" ng-click="closeModal()">✕</button>
+      </div>
+
+      <div ng-if="selectedBooking" class="modal-body">
+        <!-- Booking Info -->
+        <div class="section">
+          <h4>Booking Information</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Booking ID</span>
+              <span class="value mono">{{selectedBooking.id}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Status</span>
+              <span class="badge" ng-class="'status-' + selectedBooking.status">{{selectedBooking.status}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Amount</span>
+              <span class="value">₹{{selectedBooking.total_price | number:0}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Booked On</span>
+              <span class="value">{{selectedBooking.created_at | date:'MMM dd, yyyy hh:mm a'}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customer Info -->
+        <div class="section">
+          <h4>Customer Information</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Name</span>
+              <span class="value">{{selectedBooking.customer_name}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Email</span>
+              <span class="value">{{selectedBooking.customer_email}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Phone</span>
+              <span class="value">{{selectedBooking.customer_phone || 'N/A'}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Event Info -->
+        <div class="section">
+          <h4>Event Information</h4>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="label">Event Date</span>
+              <span class="value">{{selectedBooking.event_date | date:'MMM dd, yyyy'}}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Duration</span>
+              <span class="value">{{selectedBooking.duration_days}} days</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Location</span>
+              <span class="value">{{selectedBooking.location || 'N/A'}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="section" ng-if="selectedBooking.notes">
+          <h4>Notes</h4>
+          <p>{{selectedBooking.notes}}</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="modal-actions">
+          <button class="btn btn-success" ng-if="selectedBooking.status === 'pending'" 
+                  ng-click="confirmBooking(); closeModal()">
+            Confirm Booking
+          </button>
+          <button class="btn btn-info" ng-if="selectedBooking.status === 'confirmed'" 
+                  ng-click="completeBooking(); closeModal()">
+            Mark as Completed
+          </button>
+          <button class="btn btn-danger" ng-if="selectedBooking.status !== 'completed' && selectedBooking.status !== 'cancelled'" 
+                  ng-click="cancelBooking(); closeModal()">
+            Cancel Booking
+          </button>
+          <button class="btn btn-secondary" ng-click="closeModal()">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
