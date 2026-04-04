@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "run": "node start.js",
     "db:init": "node db/migrate.js init",
     "db:seed": "node db/migrate.js seed",
     "db:reset": "node db/migrate.js reset"
@@ -27,3 +28,4 @@
     "nodemon": "^3.1.0"
   }
 }
+
