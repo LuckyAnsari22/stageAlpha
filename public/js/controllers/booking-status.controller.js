@@ -23,7 +23,7 @@ function($scope, $routeParams, $http, $location, ToastService) {
 
   $scope.cancelBooking = function() {
     if (!confirm('Are you sure you want to cancel this booking?')) return;
-    $http.patch('/api/v1/bookings/' + id, { status: 'cancelled' }).then(function() {
+    $http.patch('/api/v1/bookings/' + id + '/status', { status: 'cancelled' }).then(function() {
       $scope.booking.status = 'cancelled';
       ToastService.show('Booking cancelled', 'success');
     }).catch(function() {

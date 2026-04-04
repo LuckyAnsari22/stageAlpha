@@ -34,7 +34,7 @@ function($scope, $http, ToastService) {
 
   // Actions
   $scope.confirmBooking = function(id) {
-    $http.patch('/api/v1/bookings/' + id, { status: 'confirmed' }).then(function() {
+    $http.patch('/api/v1/bookings/' + id + '/status', { status: 'confirmed' }).then(function() {
       var b = $scope.recentBookings.find(function(b) { return b.booking_id === id; });
       if (b) b.status = 'confirmed';
       ToastService.show('Booking confirmed', 'success');
@@ -44,7 +44,7 @@ function($scope, $http, ToastService) {
   };
 
   $scope.cancelBooking = function(id) {
-    $http.patch('/api/v1/bookings/' + id, { status: 'cancelled' }).then(function() {
+    $http.patch('/api/v1/bookings/' + id + '/status', { status: 'cancelled' }).then(function() {
       var b = $scope.recentBookings.find(function(b) { return b.booking_id === id; });
       if (b) b.status = 'cancelled';
       ToastService.show('Booking cancelled', 'success');

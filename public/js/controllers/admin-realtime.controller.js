@@ -115,17 +115,17 @@ function($scope, $http, $timeout, ToastService, SocketService) {
   
   // Actions
   $scope.confirmBooking = function(booking) {
-    $http.patch('/api/v1/bookings/' + booking.id, { status: 'confirmed' }).then(function() {
+    $http.patch('/api/v1/bookings/' + booking.id + '/status', { status: 'confirmed' }).then(function() {
       booking.status = 'confirmed';
       ToastService.show('Booking confirmed ✓', 'success');
     }).catch(function(err) {
       ToastService.show('Error: ' + (err.data?.message || 'Unknown error'), 'error');
     });
   };
-  
+
   $scope.cancelBooking = function(booking) {
     if (confirm('Cancel this booking? This cannot be undone.')) {
-      $http.patch('/api/v1/bookings/' + booking.id, { status: 'cancelled' }).then(function() {
+      $http.patch('/api/v1/bookings/' + booking.id + '/status', { status: 'cancelled' }).then(function() {
         booking.status = 'cancelled';
         ToastService.show('Booking cancelled', 'info');
       }).catch(function(err) {
