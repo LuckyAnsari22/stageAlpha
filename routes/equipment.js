@@ -176,17 +176,36 @@ router.get('/:id/reviews', async (req, res, next) => {
 // 5. POST /api/v1/equipment
 router.post('/', authenticate, requireAdmin, async (req, res, next) => {
   try {
+    console.log('[Equipment] POST received:', req.body);
     const { name, category_id, base_price, stock_qty, description, specs, image_url } = req.body;
     
-    if (!name || base_price <= 0 || stock_qty < 0 || !category_id) {
-      return res.status(400).json({ success: false, message: 'Invalid input fields' });
+    // Validate required fields
+    if (!name) {
+      console.error('[Equipment] Validation failed: name missing');
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+    if (!category_id) {
+      console.error('[Equipment] Validation failed: category_id missing', { category_id });
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+    
+    const price = parseFloat(base_price);
+    if (isNaN(price) || price <= 0) {
+      console.error('[Equipment] Validation failed: base_price invalid', { base_price, price });
+      return res.status(400).json({ success: false, message: 'Base price must be greater than 0' });
+    }
+    
+    const qty = parseInt(stock_qty);
+    if (isNaN(qty) || qty < 0) {
+      console.error('[Equipment] Validation failed: stock_qty invalid', { stock_qty, qty });
+      return res.status(400).json({ success: false, message: 'Stock quantity must be 0 or greater' });
     }
 
     const { rows } = await pool.query(`
       INSERT INTO equipment (name, category_id, base_price, current_price, stock_qty, description, specs, image_url)
       VALUES ($1, $2, $3, $3, $4, $5, $6, $7)
       RETURNING *
-    `, [name, category_id, base_price, stock_qty, description, specs, image_url]);
+    `, [name, category_id, price, qty, description, specs, image_url]);
 
     await invalidatePattern('equipment:list:*');
     
@@ -199,12 +218,42 @@ router.post('/', authenticate, requireAdmin, async (req, res, next) => {
 // 6. PUT /api/v1/equipment/:id
 router.put('/:id', authenticate, requireAdmin, async (req, res, next) => {
   try {
+    console.log('[Equipment] PUT received for ID:', req.params.id, 'Data:', req.body);
     const { name, category_id, base_price, current_price, stock_qty, description, specs, image_url, is_active } = req.body;
+    
+    // Validate required fields
+    if (!name) {
+      console.error('[Equipment] Validation failed: name missing');
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+    if (!category_id) {
+      console.error('[Equipment] Validation failed: category_id missing');
+      return res.status(400).json({ success: false, message: 'Category is required' });
+    }
+    
+    const bPrice = parseFloat(base_price);
+    if (isNaN(bPrice) || bPrice <= 0) {
+      console.error('[Equipment] Validation failed: base_price invalid', { base_price, bPrice });
+      return res.status(400).json({ success: false, message: 'Base price must be greater than 0' });
+    }
+    
+    const cPrice = parseFloat(current_price);
+    if (isNaN(cPrice) || cPrice <= 0) {
+      console.error('[Equipment] Validation failed: current_price invalid', { current_price, cPrice });
+      return res.status(400).json({ success: false, message: 'Current price must be greater than 0' });
+    }
+    
+    const qty = parseInt(stock_qty);
+    if (isNaN(qty) || qty < 0) {
+      console.error('[Equipment] Validation failed: stock_qty invalid', { stock_qty, qty });
+      return res.status(400).json({ success: false, message: 'Stock quantity must be 0 or greater' });
+    }
+    
     const { rows } = await pool.query(`
       UPDATE equipment 
       SET name=$1, category_id=$2, base_price=$3, current_price=$4, stock_qty=$5, description=$6, specs=$7, image_url=$8, is_active=$9, updated_at=NOW()
       WHERE id=$10 RETURNING *
-    `, [name, category_id, base_price, current_price, stock_qty, description, specs, image_url, is_active, req.params.id]);
+    `, [name, category_id, bPrice, cPrice, qty, description, specs, image_url, is_active, req.params.id]);
 
     if (!rows[0]) return res.status(404).json({ success: false, message: 'Not found' });
 

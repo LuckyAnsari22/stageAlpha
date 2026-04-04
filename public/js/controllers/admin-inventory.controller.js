@@ -1,15 +1,19 @@
 'use strict';
 angular.module('stageAlpha')
-.controller('AdminInventoryCtrl', ['$scope', '$http', '$timeout', 'ToastService',
-function($scope, $http, $timeout, ToastService) {
+.controller('AdminInventoryCtrl', ['$scope', '$http', 'ToastService',
+function($scope, $http, ToastService) {
   
-  $scope.isLoading = true;
+  console.log('=== AdminInventoryCtrl Initialized ===');
+  
+  // ===== STATE =====
+  $scope.isLoading = false;
+  $scope.isSaving = false;
   $scope.equipment = [];
   $scope.selectedItem = null;
   $scope.showModal = false;
   $scope.isEditing = false;
-
-  // Form for adding/editing
+  
+  // ===== FORM MODEL =====
   $scope.form = {
     name: '',
     category: '',
@@ -18,83 +22,62 @@ function($scope, $http, $timeout, ToastService) {
     quantity: 0,
     low_stock_threshold: 5
   };
+  
+  $scope.categories = ['PA Systems', 'DJ Equipment', 'Stage Lighting', 'Microphones', 'Cables & Stands'];
 
-  // Categories
-  $scope.categories = ['Audio', 'Lighting', 'Stage', 'Video', 'Other'];
-
-  // Load inventory
-  function loadInventory() {
+  // ===== LOAD INVENTORY =====
+  var loadInventory = function() {
+    console.log('[Inventory] Loading equipment...');
     $scope.isLoading = true;
-    $http.get('/api/v1/equipment').then(function(res) {
-      $scope.equipment = res.data.data || [];
-      $scope.isLoading = false;
-    }).catch(function(err) {
-      ToastService.show('Error loading inventory: ' + (err.data?.message || 'Unknown error'), 'error');
-      $scope.isLoading = false;
-    });
-  }
+    
+    $http.get('/api/v1/equipment')
+      .then(function(response) {
+        console.log('[Inventory] Success:', response.data);
+        var rawData = response.data.data || response.data || [];
+        
+        // Map API fields to display fields
+        $scope.equipment = rawData.map(function(item) {
+          return {
+            id: item.id,
+            name: item.name,
+            category: getCategoryName(item.category_id),
+            category_id: item.category_id,
+            description: item.description,
+            price_per_day: item.base_price || item.current_price || 0,
+            base_price: item.base_price,
+            current_price: item.current_price,
+            quantity: item.stock_qty || 0,
+            stock_qty: item.stock_qty,
+            specs: item.specs,
+            low_stock_threshold: (item.specs && typeof item.specs === 'object' && item.specs.low_stock_threshold) ? item.specs.low_stock_threshold : 5
+          };
+        });
+        
+        console.log('[Inventory] Equipment count:', $scope.equipment.length);
+        $scope.isLoading = false;
+      })
+      .catch(function(error) {
+        console.error('[Inventory] Error:', error);
+        $scope.isLoading = false;
+        var msg = 'Error loading inventory';
+        if (error.data && error.data.message) msg += ': ' + error.data.message;
+        if (error.statusText) msg += ' (' + error.statusText + ')';
+        ToastService.show(msg, 'error');
+      });
+  };
 
   // Initial load
   loadInventory();
 
-  // Refresh
+  // ===== ACTIONS =====
+  
   $scope.refreshInventory = function() {
+    console.log('[Inventory] Refresh clicked');
     loadInventory();
   };
 
-  // View item details
-  $scope.viewItem = function(item) {
-    $scope.selectedItem = angular.copy(item);
-    $scope.isEditing = false;
-    $scope.showModal = true;
-  };
-
-  // Edit item
-  $scope.editItem = function(item) {
-    if (!item) item = $scope.selectedItem;
-    $scope.form = angular.copy(item);
-    $scope.isEditing = true;
-  };
-
-  // Save item
-  $scope.saveItem = function() {
-    if (!$scope.form.name) {
-      ToastService.show('Please enter equipment name', 'error');
-      return;
-    }
-
-    var method = $scope.form.id ? 'PUT' : 'POST';
-    var url = $scope.form.id ? ('/api/v1/equipment/' + $scope.form.id) : '/api/v1/equipment';
-    
-    $http({
-      method: method,
-      url: url,
-      data: $scope.form
-    }).then(function() {
-      ToastService.show($scope.form.id ? 'Equipment updated!' : 'Equipment added!', 'success');
-      loadInventory();
-      $scope.closeModal();
-    }).catch(function(err) {
-      ToastService.show('Error: ' + (err.data?.message || 'Failed to save'), 'error');
-    });
-  };
-
-  // Delete item
-  $scope.deleteItem = function(item) {
-    if (!confirm('Are you sure you want to delete this equipment?')) return;
-
-    $http.delete('/api/v1/equipment/' + item.id)
-      .then(function() {
-        ToastService.show('Equipment deleted', 'success');
-        loadInventory();
-      })
-      .catch(function(err) {
-        ToastService.show('Error: ' + (err.data?.message || 'Failed to delete'), 'error');
-      });
-  };
-
-  // Open add modal
   $scope.openAddModal = function() {
+    console.log('[Inventory] Open add modal');
     $scope.form = {
       name: '',
       category: '',
@@ -103,13 +86,147 @@ function($scope, $http, $timeout, ToastService) {
       quantity: 0,
       low_stock_threshold: 5
     };
-    $scope.isEditing = true;
     $scope.selectedItem = null;
+    $scope.isEditing = true;
     $scope.showModal = true;
   };
 
-  // Close modal
+  $scope.viewItem = function(item) {
+    console.log('[Inventory] View item:', item);
+    $scope.selectedItem = angular.copy(item);
+    $scope.isEditing = false;
+    $scope.showModal = true;
+  };
+
+  $scope.editItem = function(item) {
+    console.log('[Inventory] Edit item:', item);
+    if (!item) item = $scope.selectedItem;
+    if (!item) {
+      console.warn('[Inventory] No item selected for editing');
+      ToastService.show('No item selected', 'error');
+      return;
+    }
+    
+    // Map API fields back to form fields
+    $scope.form = {
+      id: item.id,
+      name: item.name,
+      category: getCategoryName(item.category_id),  // Convert ID back to name
+      description: item.description,
+      price_per_day: item.base_price || item.current_price || 0,
+      quantity: item.stock_qty || 0,
+      low_stock_threshold: (item.specs && typeof item.specs === 'object' && item.specs.low_stock_threshold) ? item.specs.low_stock_threshold : 5
+    };
+    
+    $scope.selectedItem = item;
+    $scope.isEditing = true;
+    // Modal should already be open from viewItem or can be opened here
+    if (!$scope.showModal) {
+      $scope.showModal = true;
+    }
+  };
+
+  $scope.saveItem = function() {
+    console.log('[Inventory] Save item:', $scope.form);
+    
+    if (!$scope.form.name || $scope.form.name.trim() === '') {
+      ToastService.show('Please enter equipment name', 'error');
+      return;
+    }
+
+    if (!$scope.form.category || $scope.form.category.trim() === '') {
+      ToastService.show('Please select a category', 'error');
+      return;
+    }
+
+    $scope.isSaving = true;
+    var isNew = !$scope.form.id;
+    var method = isNew ? 'POST' : 'PUT';
+    var url = isNew ? '/api/v1/equipment' : '/api/v1/equipment/' + $scope.form.id;
+    
+    // Map form fields to API fields
+    var apiData = {
+      name: $scope.form.name,
+      category_id: getCategoryId($scope.form.category),  // Convert category string to ID
+      description: $scope.form.description || '',
+      base_price: parseInt($scope.form.price_per_day) || 0,
+      current_price: parseInt($scope.form.price_per_day) || 0,
+      stock_qty: parseInt($scope.form.quantity) || 0,
+      specs: {
+        low_stock_threshold: parseInt($scope.form.low_stock_threshold) || 5
+      },
+      image_url: '',
+      is_active: true
+    };
+    
+    console.log('[Inventory] Saving:', method, url, 'Data:', apiData);
+    
+    $http({
+      method: method,
+      url: url,
+      data: apiData
+    })
+      .then(function(response) {
+        console.log('[Inventory] Save success:', response.data);
+        $scope.isSaving = false;
+        ToastService.show(isNew ? 'Equipment added!' : 'Equipment updated!', 'success');
+        loadInventory();
+        $scope.closeModal();
+      })
+      .catch(function(error) {
+        console.error('[Inventory] Save error:', error);
+        $scope.isSaving = false;
+        var msg = 'Failed to save equipment';
+        if (error.data && error.data.message) msg += ': ' + error.data.message;
+        if (error.status === 400) msg = 'Invalid data: Check all required fields';
+        if (error.status === 500) msg = 'Server error: Check category ID';
+        ToastService.show(msg, 'error');
+      });
+  };
+  
+  // Helper to convert category name to ID
+  var getCategoryId = function(categoryName) {
+    var categoryMap = {
+      'PA Systems': 1,
+      'DJ Equipment': 2,
+      'Stage Lighting': 3,
+      'Microphones': 4,
+      'Cables & Stands': 5
+    };
+    return categoryMap[categoryName] || 1;
+  };
+
+  $scope.deleteItem = function(item) {
+    console.log('[Inventory] Delete item:', item);
+    
+    if (!item || !item.id) {
+      console.warn('[Inventory] Cannot delete - no ID');
+      ToastService.show('Invalid item', 'error');
+      return;
+    }
+
+    if (!confirm('Delete "' + item.name + '"? This cannot be undone.')) {
+      console.log('[Inventory] Delete cancelled');
+      return;
+    }
+
+    console.log('[Inventory] Deleting ID:', item.id);
+    $http.delete('/api/v1/equipment/' + item.id)
+      .then(function(response) {
+        console.log('[Inventory] Delete success:', response.data);
+        ToastService.show('Equipment deleted', 'success');
+        loadInventory();
+      })
+      .catch(function(error) {
+        console.error('[Inventory] Delete error:', error);
+        var msg = 'Failed to delete';
+        if (error.data && error.data.message) msg += ': ' + error.data.message;
+        ToastService.show(msg, 'error');
+      });
+  };
+
   $scope.closeModal = function() {
+    console.log('[Inventory] Close modal');
     $scope.showModal = false;
     $scope.selectedItem = null;
     $scope.isEditing = false;
@@ -123,13 +240,28 @@ function($scope, $http, $timeout, ToastService) {
     };
   };
 
-  // Check if low stock
+  // ===== UTILITY FUNCTIONS =====
+  
+  // Helper to convert category ID back to name
+  var getCategoryName = function(categoryId) {
+    var categoryMap = {
+      1: 'PA Systems',
+      2: 'DJ Equipment',
+      3: 'Stage Lighting',
+      4: 'Microphones',
+      5: 'Cables & Stands'
+    };
+    return categoryMap[categoryId] || 'PA Systems';
+  };
+  
   $scope.isLowStock = function(item) {
-    return item.quantity <= (item.low_stock_threshold || 5);
+    if (!item) return false;
+    var threshold = item.low_stock_threshold || 5;
+    return item.quantity <= threshold;
   };
 
-  // Get stock color
   $scope.getStockColor = function(item) {
+    if (!item) return '#999';
     if (item.quantity === 0) return '#ff3333';
     if (item.quantity <= (item.low_stock_threshold || 5)) return '#ffa500';
     return '#00ff00';
