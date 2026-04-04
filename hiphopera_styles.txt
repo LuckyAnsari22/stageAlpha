@@ -1,0 +1,10 @@
+=== LINKS ===
+<link href="dist/viewer/bundle.5a9ee905b78e8a4566ce.css" rel="stylesheet"/>
+
+=== STYLES ===
+<style>.mag-pages-container:after {
+    animation: grain 8s steps(10) infinite;
+    background-repeat: repeat;
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAlgAAAF8CAYAAAATs8VhAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAFdiRJREFUeNpM3QW0fllZBvAzw6CE5DlnBKRBpBuRxiFEwAEFpDukS7pLRCkVJAcYUBxSGqVTpZFUOpSQ7obx+b3w/Nf91rrr3vt95+z9xvPm3vt8y+/8zu+c+n//93+3T3/60+tf/uVfrq973evW85///Ot//ud/rg9/+MNX75/pTGdaX/va164/+MEP5pqTnOQk67Is6wUveMHV6/GPf/z6Z3/2Z+stb3nL9X/+53/W448/fv3qV7+63v3ud1+POOKIGeczn/nMespTnnI91alOtX7pS19af/M3f3Ou//rXv75e6UpXWt/61reud7vb3dZHPOIR67e//e31i1/84vqGN7xh/d73vrc+8YlPXK985SvP/a7/6U9/uv7kJz9ZP/GJT6znPe9515e//OXrb/3Wb63HHnvs+qlPfWq9//3vP9f8xV/8xXqiE51oaEGT12GHHTbv3e52t1tvcYtbrP/3f/83P3/7t3+7/uIXv1i/9a1vrZ///OfXG93oRnPd7W9/+5EHWo888sj5jBzOec5zrq9+9avX053udOvVrna19aUvfenM8R//8R/ry172svXd73730PGBD3xgxvqN3/iN9X3ve9/69Kc/fX3oQx+6/t3f/d36qEc9aug2v7/PdrazDc9//dd/vf77v//7uu/7eu1rX3t95CMfuf76r//6esITnnB90pOetH7nO98ZXujA/W9605vm9wMf+MD1y1/+8ujFfIcffvjIDA3P
+
+<style> html, body { width: 100%; height: 100%; } body { margin: 0; padding: 0; font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, Arial, sans-serif; color: #282828; -webkit-tap-highlight-color: rgba(0,0,0,0); } * ::selection { background-color: #B8B8B8; } a, button, label, div, span, input, *:hover { -webkit-tap-highlight-color: rgba(0,0,0,0); } h1, h2, h3, h4, h5 { margin: 0; } </style>

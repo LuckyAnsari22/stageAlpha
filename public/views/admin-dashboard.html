@@ -1,0 +1,146 @@
+<!-- ADMIN DASHBOARD - Beautiful KPI Overview -->
+<div ng-controller="AdminDashboardCtrl" class="admin-dashboard">
+  
+  <!-- HEADER WITH ACTIONS -->
+  <div class="dashboard-header">
+    <h2>Dashboard Overview</h2>
+    <button class="btn btn-primary" ng-click="refreshDashboard()" ng-disabled="isLoading">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M23 4v6h-6"></path>
+        <path d="M1 20v-6h6"></path>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <!-- LOADING STATE -->
+  <div ng-show="isLoading" class="dashboard-loading">
+    <div class="loading-spinner"></div>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- KPI CARDS GRID -->
+  <div ng-hide="isLoading" class="kpi-grid">
+    
+    <!-- Card 1: Today's Bookings -->
+    <div class="kpi-card card-bookings" ng-class="{'pulse': pulseAnimation}">
+      <div class="card-header">
+        <h3>Today's Bookings</h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="13" r="4"></circle>
+        </svg>
+      </div>
+      <div class="card-value">
+        <span class="big-number">{{stats.todayBookings}}</span>
+        <span class="trend-up">↑ 12%</span>
+      </div>
+      <div class="card-footer">
+        <span class="stat-label">{{stats.pendingBookings}} pending</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Total Revenue -->
+    <div class="kpi-card card-revenue" ng-class="{'pulse': pulseAnimation}">
+      <div class="card-header">
+        <h3>Today's Revenue</h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="1" x2="12" y2="23"></line>
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+        </svg>
+      </div>
+      <div class="card-value">
+        <span class="big-number">₹{{stats.totalRevenue | number:0}}</span>
+        <span class="trend-up">↑ 8%</span>
+      </div>
+      <div class="card-footer">
+        <span class="stat-label">+₹{{stats.totalRevenue * 0.08 | number:0}} from yesterday</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Active Customers -->
+    <div class="kpi-card card-customers" ng-class="{'pulse': pulseAnimation}">
+      <div class="card-header">
+        <h3>Active Customers</h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+      </div>
+      <div class="card-value">
+        <span class="big-number">{{stats.activeCustomers}}</span>
+        <span class="trend-up">↑ 5%</span>
+      </div>
+      <div class="card-footer">
+        <span class="stat-label">Active in last 24h</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Low Stock Items -->
+    <div class="kpi-card card-inventory" ng-class="{'pulse': pulseAnimation}">
+      <div class="card-header">
+        <h3>Low Stock Items</h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.13a2 2 0 0 0-.58-1.41l-4.7-4.7A2 2 0 0 0 13.13 2H9"></path>
+          <polyline points="3 12 15 12"></polyline>
+          <polyline points="9 8 9 16"></polyline>
+        </svg>
+      </div>
+      <div class="card-value">
+        <span class="big-number" style="color:#ffa500;">{{stats.lowStockItems}}</span>
+        <span class="trend-warning">⚠ Alert</span>
+      </div>
+      <div class="card-footer">
+        <span class="stat-label">Need replenishment</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- REVENUE CHART -->
+  <div ng-hide="isLoading" class="chart-container">
+    <h3>Revenue Trend</h3>
+    <canvas id="revenueChart" height="300"></canvas>
+  </div>
+
+  <!-- RECENT BOOKINGS TABLE -->
+  <div ng-hide="isLoading" class="recent-bookings-card">
+    <div class="card-header">
+      <h3>Recent Bookings</h3>
+      <a href="#!/admin/bookings" class="link-primary">View All</a>
+    </div>
+    <div ng-if="recentBookings.length > 0" class="bookings-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Booking ID</th>
+            <th>Customer</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="booking in recentBookings | limitTo:5" ng-class="'status-' + booking.status">
+            <td class="booking-id">{{booking.booking_id}}</td>
+            <td class="customer-name">{{booking.customer_name}}</td>
+            <td class="amount">₹{{booking.total_price | number:0}}</td>
+            <td><span class="badge" ng-class="'status-' + booking.status">{{booking.status}}</span></td>
+            <td class="date">{{booking.event_date | date:'MMM dd'}}</td>
+            <td class="actions">
+              <button class="btn-small btn-confirm" ng-if="booking.status === 'pending'" title="Confirm">✓</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div ng-if="recentBookings.length === 0" class="empty-state">
+      <p>No bookings yet</p>
+    </div>
+  </div>
+
+</div>

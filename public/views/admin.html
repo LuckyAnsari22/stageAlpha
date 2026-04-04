@@ -1,12 +1,13 @@
 <div class="page">
-  <div class="page-header">
+  <div class="page-header sa-page-header">
     <div>
-      <h1 class="page-title">Admin Dashboard</h1>
+      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ COMMAND CENTER</span>
+      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Admin Dashboard</h1>
       <p class="page-sub">Operations overview and management console</p>
     </div>
     <div class="flex gap-2">
-      <span class="badge badge-brand">
-        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+      <span class="badge badge-brand" style="animation: glow-pulse 2s ease-in-out infinite;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;animation:pulse 1.5s ease infinite;"></span>
         Live
       </span>
     </div>
@@ -52,7 +53,7 @@
     <!-- Revenue Chart -->
     <div class="chart-card">
       <div class="chart-head">
-        <span class="heading-sm">Monthly Revenue</span>
+        <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Monthly Revenue</span>
         <span class="label">Last 12 months</span>
       </div>
       <div class="chart-body">
@@ -84,7 +85,7 @@
   <!-- Recent Bookings Table -->
   <div class="data-table-wrap mt-5">
     <div class="data-table-head">
-      <span class="heading-sm">Recent Bookings</span>
+      <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Recent Bookings</span>
       <a href="#!/admin/calendar" class="btn btn-ghost btn-sm">View Calendar →</a>
     </div>
     <div class="table-responsive">
@@ -128,7 +129,7 @@
   <!-- Equipment Inventory -->
   <div class="data-table-wrap mt-5">
     <div class="data-table-head">
-      <span class="heading-sm">Equipment Inventory</span>
+      <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Equipment Inventory</span>
       <span class="label">{{inventory.length}} items</span>
     </div>
     <div class="table-responsive">

@@ -15,20 +15,24 @@
     <!-- Detail Layout -->
     <div class="detail-layout">
       <!-- Visual -->
-      <div class="detail-visual" ng-class="getCatClass(equipment.category_name)">
+      <div class="detail-visual sa-detail-visual" ng-class="getCatClass(equipment.category_name)">
         <span style="font-size:8rem; filter:drop-shadow(0 8px 32px rgba(0,0,0,0.5));">{{getCatIcon(equipment.category_name)}}</span>
+        <!-- Artistic corner accents -->
+        <div class="sa-detail-corner sa-detail-corner--tl"></div>
+        <div class="sa-detail-corner sa-detail-corner--br"></div>
       </div>
 
       <!-- Info -->
       <div class="detail-info">
         <div>
           <span class="badge badge-brand mb-3" style="display:inline-flex;">{{equipment.category_name}}</span>
-          <h1 style="font-size:2.5rem; margin-bottom:0.5rem;">{{equipment.name}}</h1>
+          <h1 style="font-size:2.5rem; margin-bottom:0.5rem; font-family:'Amatic SC', var(--font-display); text-transform:uppercase; letter-spacing:0.03em; font-size:3.5rem;">{{equipment.name}}</h1>
           <p style="font-size:1rem; line-height:1.7;">{{equipment.description || 'Professional-grade equipment for your events. Maintained and tested before every rental.'}}</p>
         </div>
 
         <!-- Price Box -->
-        <div class="detail-price-box">
+        <div class="detail-price-box sa-price-box">
+          <div class="sa-price-box__accent"></div>
           <div class="flex-between mb-3">
             <div>
               <div class="label mb-1">Current Price</div>
@@ -65,7 +69,7 @@
 
         <!-- Specs -->
         <div class="card" ng-show="equipment.specs">
-          <h4 class="mb-3">Specifications</h4>
+          <h4 class="mb-3" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.8rem; letter-spacing:0.03em;">Specifications</h4>
           <div class="flex-between py-2 border-bottom" ng-repeat="(key, value) in equipment.specs">
             <span class="text-3 text-upper" style="font-size:0.78rem;">{{key}}</span>
             <span class="text-1 font-mono" style="font-size:0.85rem;">{{value}}</span>
@@ -77,7 +81,7 @@
     <!-- Price History Chart -->
     <div class="price-chart-wrap reveal" ng-show="priceHistory.length > 0">
       <div class="flex-between mb-4">
-        <h3>Price History</h3>
+        <h3 style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:2rem; letter-spacing:0.03em;">Price History</h3>
         <span class="label">{{priceHistory.length}} price changes recorded</span>
       </div>
       <div style="height:280px;">
@@ -87,7 +91,7 @@
 
     <!-- Reviews Section -->
     <div class="mt-6 reveal" ng-show="reviews.length > 0">
-      <h3 class="mb-4">Customer Reviews ({{reviews.length}})</h3>
+      <h3 class="mb-4" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:2rem; letter-spacing:0.03em;">Customer Reviews ({{reviews.length}})</h3>
       <div class="grid grid-cols-2" style="gap:1rem;">
         <div class="review-card" ng-repeat="r in reviews track by r.id">
           <div class="review-stars">
@@ -106,7 +110,7 @@
   <!-- Error State -->
   <div class="empty-state" ng-show="error">
     <div class="empty-state-icon">⚠️</div>
-    <h3>Equipment Not Found</h3>
+    <h3 style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:2rem;">Equipment Not Found</h3>
     <p>The equipment you're looking for doesn't exist or has been removed.</p>
     <a href="#!/equipment" class="btn btn-outline mt-3">Back to Catalog</a>
   </div>

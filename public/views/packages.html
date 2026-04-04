@@ -1,7 +1,8 @@
 <div class="page">
-  <div class="page-header">
+  <div class="page-header sa-page-header">
     <div>
-      <h1 class="page-title">Event Packages</h1>
+      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ BUNDLES</span>
+      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Event Packages</h1>
       <p class="page-sub">Pre-configured equipment bundles for your events — save with automatic discounts</p>
     </div>
   </div>
@@ -14,12 +15,12 @@
   <!-- Packages Grid -->
   <div class="grid grid-cols-2" style="gap:1.5rem;" ng-hide="loading">
     <a href="#!/packages/{{pkg.slug}}" class="package-card reveal" ng-repeat="pkg in packages track by pkg.id"
-       ng-class="{'featured': pkg.is_featured}" style="position:relative; text-decoration:none;">
+       ng-class="{'featured': pkg.is_featured}" style="position:relative; text-decoration:none; --delay: {{$index * 0.08}}s">
       <div class="package-header">
         <div class="flex-between">
           <div>
             <span class="badge badge-brand mb-2" style="display:inline-flex;" ng-show="pkg.is_featured">★ Featured</span>
-            <h3 style="font-size:1.35rem;">{{pkg.name}}</h3>
+            <h3 style="font-size:1.35rem; font-family:'Amatic SC', var(--font-display); text-transform:uppercase; letter-spacing:0.03em; font-size:1.8rem;">{{pkg.name}}</h3>
           </div>
           <div style="text-align:right;" ng-show="pkg.discount_pct > 0">
             <span class="badge badge-success" style="font-size:0.8rem;">{{pkg.discount_pct}}% OFF</span>
@@ -42,7 +43,7 @@
   <!-- Empty State -->
   <div class="empty-state" ng-show="!loading && (!packages || packages.length === 0)">
     <div class="empty-state-icon">📦</div>
-    <h3>No packages available</h3>
+    <h3 style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:2rem;">No packages available</h3>
     <p>Check back later for pre-configured event bundles.</p>
   </div>
 </div>

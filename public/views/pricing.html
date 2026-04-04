@@ -9,9 +9,10 @@
     <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
   </div>
 
-  <div class="page-header">
+  <div class="page-header sa-page-header">
     <div>
-      <h1 class="page-title">Pricing Engine</h1>
+      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ YIELD MANAGEMENT</span>
+      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Pricing Engine</h1>
       <p class="page-sub">Lerner Index dynamic pricing with demand elasticity estimation</p>
     </div>
     <button class="btn btn-primary btn-sm" ng-click="recalculateAll()" ng-disabled="recalculating">
@@ -64,7 +65,7 @@
   <!-- Elasticity Table -->
   <div class="data-table-wrap mt-5">
     <div class="data-table-head">
-      <span class="heading-sm">Elasticity Estimates</span>
+      <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Elasticity Estimates</span>
       <span class="label">OLS Regression · PostgreSQL REGR_SLOPE</span>
     </div>
     <table>
@@ -99,7 +100,7 @@
 
   <!-- Formula Explanation -->
   <div class="card mt-5 reveal">
-    <h4 class="mb-3">📐 Lerner Index Pricing Formula</h4>
+    <h4 class="mb-3" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.8rem;">📐 Lerner Index Pricing Formula</h4>
     <div class="font-mono" style="font-size:1.1rem; color:var(--accent); margin-bottom:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-sm);">
       P* = MC × ( |ε| / (|ε| - 1) ) × Season_Multiplier
     </div>

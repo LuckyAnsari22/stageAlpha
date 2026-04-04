@@ -1,8 +1,9 @@
 <div class="page">
-  <!-- Page Header -->
-  <div class="page-header">
+  <!-- Artistic Page Header -->
+  <div class="page-header sa-page-header">
     <div>
-      <h1 class="page-title">Equipment Catalog</h1>
+      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ CATALOG</span>
+      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Equipment Catalog</h1>
       <p class="page-sub">{{filteredEquipment.length}} items available for rent</p>
     </div>
     <div class="flex gap-2">
@@ -54,7 +55,7 @@
 
   <!-- Equipment Grid -->
   <div class="equipment-grid" ng-hide="loading">
-    <div class="equip-card reveal" ng-repeat="eq in filteredEquipment track by eq.id">
+    <div class="equip-card reveal" ng-repeat="eq in filteredEquipment track by eq.id" style="--delay: {{$index * 0.05}}s">
       <a href="#!/equipment/{{eq.id}}">
         <div class="equip-visual" ng-class="getCatClass(eq.category_name)">
           <span class="equip-cat-icon">{{getCatIcon(eq.category_name)}}</span>

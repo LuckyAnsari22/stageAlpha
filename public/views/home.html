@@ -1,194 +1,281 @@
-<div class="hero-section" style="position:relative; overflow:hidden; min-height: 85vh; display:flex; align-items:center; justify-content:center; flex-direction:column;">
-  <!-- AUDIO VISUALIZER CANVAS BACKGROUND -->
-  <canvas id="visualizerCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; opacity:0.8; pointer-events:none; mix-blend-mode: screen;"></canvas>
-  
-  <div class="ghost-text" style="z-index:1; opacity:0.03;">STAGEALPHA</div>
+<!-- ═══════════════════════════════════════════════════════════════
+     STAGEALPHA — CINEMATIC HERO LANDING
+     Inspired by hiphopera.au: Layered parallax, scroll-reveal,
+     artistic imagery, organic floating animations
+     ═══════════════════════════════════════════════════════════════ -->
 
-  <div class="hero-content" style="position:relative; z-index:2; text-align:center; padding-top: 5rem;">
-    <div class="hero-badge" style="margin: 0 auto 2rem auto; display:inline-flex; border: 1px solid rgba(0, 240, 255, 0.4); box-shadow: 0 0 15px rgba(0, 240, 255, 0.2);">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      Dynamic Pricing Engine · Powered by PostgreSQL
-    </div>
+<!-- ── ACT I: THE CINEMATIC HERO ── -->
+<section class="sa-hero" id="heroSection">
 
-    <!-- CYBERPUNK GLITCH TEXT -->
-    <h1 class="heading-xl glitch" data-text="Amplify Your Event." style="font-size: clamp(3rem, 8vw, 6.5rem); letter-spacing:-2px; text-transform:uppercase; margin-bottom:1rem; position:relative; display:inline-block; font-weight:900; color:#fff; line-height:1.1;">
-      Amplify Your <br/><span style="color:var(--accent); text-shadow: 0 0 30px var(--accent);">Event.</span>
-    </h1>
-    
-    <p class="text-1" style="max-width:650px; margin:1.5rem auto 3rem auto; font-size:1.2rem; color:var(--text-2); opacity:0.9; line-height:1.6;">
-      Deploy professional-grade staging, lighting, and acoustic hardware. 
-      Driven by a <b>neural-net</b> pricing algorithm for unmatched budget efficiency.
-    </p>
+  <!-- Ambient particle canvas -->
+  <canvas id="heroParticles" class="sa-hero__particles"></canvas>
 
-    <div class="hero-actions" style="display:flex; gap:1.5rem; justify-content:center;">
-      <a href="#!/equipment" class="btn btn-primary btn-lg" style="box-shadow: 0 0 30px rgba(0, 240, 255, 0.4); border:1px solid rgba(0,240,255,0.6); font-weight:700; letter-spacing:1px; text-transform:uppercase; padding: 1.2rem 3rem; transform: scale(1); transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-        Initialize Hardware
+  <!-- Layered background botanicals — left side -->
+  <div class="sa-hero__flora sa-hero__flora--left">
+    <img src="/assets/anim-0.gif" alt="" class="flora-layer flora-layer--back" />
+  </div>
+
+  <!-- Layered background botanicals — right side -->
+  <div class="sa-hero__flora sa-hero__flora--right">
+    <img src="/assets/anim-1.gif" alt="" class="flora-layer flora-layer--back" />
+  </div>
+
+  <!-- Gradient overlays for depth -->
+  <div class="sa-hero__veil sa-hero__veil--left"></div>
+  <div class="sa-hero__veil sa-hero__veil--right"></div>
+  <div class="sa-hero__veil sa-hero__veil--bottom"></div>
+
+  <!-- Central focus area -->
+  <div class="sa-hero__center">
+
+    <!-- Spinning circular text ring -->
+    <svg class="sa-hero__orbit" viewBox="0 0 500 500">
+      <defs>
+        <path id="orbitPath" d="M 250,30 A 220,220 0 1,1 249.9,30" fill="none" />
+      </defs>
+      <text fill="rgba(255,255,255,0.5)" font-size="16" letter-spacing="8"
+            font-family="'Amatic SC', cursive" font-weight="700" text-transform="uppercase">
+        <textPath href="#orbitPath" startOffset="0%">
+          ★ EVENT EQUIPMENT RENTAL ★ PROFESSIONAL STAGE GEAR ★ DYNAMIC PRICING ★ LIVE MONITORING ★
+        </textPath>
+      </text>
+    </svg>
+
+    <!-- The arch/pill image — cinematic projector art -->
+    <div class="sa-hero__arch">
+      <img src="/assets/hero-cinematic.jpg" alt="StageAlpha — Cinematic Equipment"
+           class="sa-hero__arch-img" />
+
+      <!-- Gradient overlay on image -->
+      <div class="sa-hero__arch-overlay"></div>
+
+      <!-- Central trigger button (blue pill — hiphopera style) -->
+      <a href="#!/equipment" class="sa-hero__trigger" id="heroTrigger">
+        <div class="sa-hero__trigger-dot"></div>
+        <div class="sa-hero__trigger-ring"></div>
+        <div class="sa-hero__trigger-ring sa-hero__trigger-ring--outer"></div>
       </a>
-      <a href="#!/packages" class="btn btn-outline btn-lg" style="backdrop-filter: blur(10px); background: rgba(255,255,255,0.05); padding: 1.2rem 3rem;">
-        View Packages
-      </a>
+    </div>
+
+    <!-- Floating title -->
+    <div class="sa-hero__title-wrap">
+      <h1 class="sa-hero__title">
+        <span class="sa-hero__title-line" data-text="Stage">Stage</span>
+        <span class="sa-hero__title-line sa-hero__title-line--accent" data-text="Alpha">Alpha</span>
+      </h1>
     </div>
   </div>
 
-  <!-- Animated gradient radial overlay for depth -->
-  <div style="position:absolute; bottom:0; left:0; width:100%; height:50%; background:linear-gradient(to top, var(--bg-1), transparent); z-index:1;"></div>
-</div>
-
-  <!-- STATS STRIP -->
-  <div class="hero-stats" ng-hide="loadingStats">
-    <div class="stat-item">
-      <div class="stat-num">{{stats.total_equipment || 20}}+</div>
-      <div class="stat-label">Equipment Items</div>
+  <!-- Scroll indicator (mouse pill) -->
+  <div class="sa-hero__scroll-cue">
+    <div class="sa-hero__mouse">
+      <div class="sa-hero__mouse-wheel"></div>
     </div>
-    <div class="stat-item">
-      <div class="stat-num">{{stats.total_bookings || 250}}+</div>
-      <div class="stat-label">Bookings Processed</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">{{stats.total_customers || 12}}</div>
-      <div class="stat-label">Active Customers</div>
-    </div>
-    <div class="stat-item">
-      <div class="stat-num">5</div>
-      <div class="stat-label">Categories</div>
-    </div>
-  </div>
-</div>
-
-<!-- FEATURES -->
-<section class="page">
-  <div style="text-align:center; margin-bottom:3rem;">
-    <h2>Why <span class="gradient-text">StageAlpha</span>?</h2>
-    <p style="max-width:500px; margin:0.5rem auto 0;">Built with 23 PostgreSQL tables, stored procedures, triggers, and a Lerner Index pricing engine.</p>
-  </div>
-
-  <div class="feature-grid">
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">📊</div>
-      <h3>Dynamic Pricing</h3>
-      <p>Lerner Index formula calculates optimal prices using OLS regression on demand elasticity data.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">🔔</div>
-      <h3>Real-Time Notifications</h3>
-      <p>Socket.IO powered live updates for booking confirmations, price changes, and stock alerts.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">📦</div>
-      <h3>Event Packages</h3>
-      <p>Pre-configured bundles for weddings, concerts, corporate events with automatic discounts.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">🧪</div>
-      <h3>Backtest Engine</h3>
-      <p>Compare algorithm vs base pricing over historical periods to measure revenue improvement.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">📋</div>
-      <h3>Quote System</h3>
-      <p>Request custom quotes for large events. Admin can approve, modify, and convert to bookings.</p>
-    </div>
-    <div class="feature-card reveal">
-      <div class="feature-icon-wrap">📈</div>
-      <h3>Analytics Dashboard</h3>
-      <p>Revenue trends, category breakdown, seasonality charts, and materialized views for fast reporting.</p>
-    </div>
+    <span class="sa-hero__scroll-text">SCROLL TO EXPLORE</span>
   </div>
 </section>
 
-<!-- ADMIN QUICK STATS (If Admin) -->
-<section class="page" ng-show="isAdmin" style="padding-top:0;">
-  <div class="flex-between mb-4">
-    <h2>Operations Overview</h2>
-    <a href="#!/admin" class="btn btn-outline btn-sm">Open Admin Dashboard →</a>
-  </div>
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-label">Today's Bookings</div>
-      <div class="kpi-value text-brand">{{stats.today_bookings || 0}}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Monthly Revenue</div>
-      <div class="kpi-value text-success">₹{{stats.month_revenue | number:0}}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Pending Bookings</div>
-      <div class="kpi-value text-warning">{{stats.pending_bookings || 0}}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Low Stock Alerts</div>
-      <div class="kpi-value text-danger">{{stats.low_stock_items || 0}}</div>
-    </div>
-  </div>
-</section>
+<!-- ── ACT II: THE REVEAL — WHAT WE DO ── -->
+<section class="sa-reveal-section" id="act2">
+  <div class="container">
 
-<!-- FEATURED EQUIPMENT -->
-<section class="page" ng-hide="loadingEq" style="padding-top:0;">
-  <div class="flex-between mb-5">
-    <div>
-      <h2>Featured Equipment</h2>
-      <p class="mt-1">Top-rated gear from our catalog</p>
+    <div class="sa-section-header reveal">
+      <span class="sa-section-tag">✦ THE PLATFORM</span>
+      <h2 class="sa-section-title">Professional Grade.<br><span class="gradient-text">Event Ready.</span></h2>
+      <p class="sa-section-sub">From intimate gigs to stadium tours — rent, monitor, and manage
+        professional audio, lighting, and stage equipment with dynamic AI-powered pricing.</p>
     </div>
-    <a href="#!/equipment" class="btn btn-outline btn-sm">View All →</a>
-  </div>
 
-  <div class="equipment-grid">
-    <a href="#!/equipment/{{eq.id}}" class="equip-card reveal" ng-repeat="eq in featuredEquipment track by eq.id">
-      <div class="equip-visual" ng-class="eq.cat_class || 'cat-default'">
-        <span class="equip-cat-icon">{{eq.icon || '🎵'}}</span>
-        <span class="equip-badge">{{eq.category_name}}</span>
-        <div class="out-of-stock-overlay" ng-show="eq.stock_qty <= 0">Out of Stock</div>
+    <!-- Feature pillars -->
+    <div class="sa-pillars">
+      <div class="sa-pillar reveal" style="--delay: 0.1s">
+        <div class="sa-pillar__icon">🎛️</div>
+        <div class="sa-pillar__glow"></div>
+        <h3>Equipment Catalog</h3>
+        <p>200+ items across PA systems, DJ controllers, lighting rigs, microphones, and cables. Real-time availability tracking.</p>
+        <a href="#!/equipment" class="sa-pillar__link">Browse Catalog →</a>
       </div>
-      <div class="equip-body">
-        <div class="equip-name">{{eq.name}}</div>
-        <div class="equip-meta">
-          <span class="price-tag">₹{{eq.current_price | number:0}} <small>/day</small></span>
-          <span class="stock-pill" ng-class="{'stock-ok': eq.stock_qty > 3, 'stock-low': eq.stock_qty > 0 && eq.stock_qty <= 3, 'stock-out': eq.stock_qty <= 0}">
-            {{eq.stock_qty > 0 ? eq.stock_qty + ' available' : 'Sold out'}}
-          </span>
-        </div>
+
+      <div class="sa-pillar reveal" style="--delay: 0.2s">
+        <div class="sa-pillar__icon">📊</div>
+        <div class="sa-pillar__glow"></div>
+        <h3>Dynamic Pricing</h3>
+        <p>Yield-management algorithms adjust prices in real time based on demand, seasonality, and inventory utilization.</p>
+        <a href="#!/equipment" class="sa-pillar__link">See Live Prices →</a>
       </div>
-    </a>
-  </div>
-</section>
 
-<!-- TESTIMONIALS -->
-<section class="page" style="padding-top:0;">
-  <div style="text-align:center; margin-bottom:2rem;">
-    <h2>What Our Clients Say</h2>
-    <p class="mt-1">Real reviews from verified bookings</p>
-  </div>
-  <div class="testimonial-grid reveal">
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★★</div>
-      <p class="testimonial-text">"The JBL speakers were pristine and the bass shook the entire venue. Sound quality was absolutely fantastic for our wedding reception."</p>
-      <div class="testimonial-author">Rajesh Sharma</div>
-      <div class="testimonial-role">Wedding · Sai Mangal Karyalay, Shirpur</div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★★</div>
-      <p class="testimonial-text">"Setup was professional and on time. The stage lighting transformed our college fest into a concert-level experience. Highly recommended!"</p>
-      <div class="testimonial-author">Priya Patel</div>
-      <div class="testimonial-role">College Fest · MPSTME Community Hall</div>
-    </div>
-    <div class="testimonial-card">
-      <div class="testimonial-stars">★★★★☆</div>
-      <p class="testimonial-text">"Great equipment and fair pricing. The dynamic pricing model actually saved us money by booking during the off-season. Very transparent."</p>
-      <div class="testimonial-author">Vikram Nair</div>
-      <div class="testimonial-role">Corporate · Hotel Grand Pratap, Nashik</div>
+      <div class="sa-pillar reveal" style="--delay: 0.3s">
+        <div class="sa-pillar__icon">📡</div>
+        <div class="sa-pillar__glow"></div>
+        <h3>IoT Overwatch</h3>
+        <p>Live telemetry streams from connected equipment. Monitor temperature, voltage, and usage in real time from your dashboard.</p>
+        <a href="#!/telemetry" class="sa-pillar__link">Open Overwatch →</a>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- LOADING STATE -->
-<div class="flex-center" style="padding:4rem 0;" ng-show="loadingStats || loadingEq">
-  <div class="spinner"></div>
-</div>
-
-<!-- ERROR STATE -->
-<div class="page" ng-show="error">
-  <div class="alert alert-danger">
-    <strong>Connection Error:</strong> Unable to reach the server. Please check your database connection and try again.
-    <button class="btn btn-outline btn-sm mt-2" onclick="location.reload()">Retry</button>
+<!-- ── ACT III: THE EXPERIENCE — ANIMATED STATS ── -->
+<section class="sa-stats-section">
+  <div class="sa-stats-bg">
+    <img src="/assets/anim-2.gif" alt="" class="sa-stats-bg__img"/>
+    <div class="sa-stats-bg__overlay"></div>
   </div>
-</div>
+  <div class="container" style="position:relative; z-index:2;">
+    <div class="sa-stats-grid">
+      <div class="sa-stat reveal" style="--delay: 0.1s">
+        <div class="sa-stat__value" data-target="200">0</div>
+        <div class="sa-stat__label">Equipment Items</div>
+      </div>
+      <div class="sa-stat reveal" style="--delay: 0.2s">
+        <div class="sa-stat__value" data-target="50">0</div>
+        <div class="sa-stat__label">Active Bookings</div>
+      </div>
+      <div class="sa-stat reveal" style="--delay: 0.3s">
+        <div class="sa-stat__value" data-target="15">0</div>
+        <div class="sa-stat__label">Curated Packages</div>
+      </div>
+      <div class="sa-stat reveal" style="--delay: 0.4s">
+        <div class="sa-stat__value" data-target="99">0</div>
+        <div class="sa-stat__label">Uptime %</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ACT IV: TESTIMONIALS / SOCIAL PROOF ── -->
+<section class="sa-testimonial-section">
+  <div class="container">
+    <div class="sa-section-header reveal">
+      <span class="sa-section-tag">✦ VOICES</span>
+      <h2 class="sa-section-title">Trusted by<br><span class="gradient-text">Industry Professionals</span></h2>
+    </div>
+
+    <div class="sa-testimonials reveal" style="--delay: 0.15s">
+      <div class="sa-testimonial-card">
+        <div class="sa-testimonial-stars">★★★★★</div>
+        <p class="sa-testimonial-text">"StageAlpha transformed our gear logistics. The dynamic pricing is genius — we saved 30% on our last festival setup."</p>
+        <div class="sa-testimonial-author">Arjun Mehta</div>
+        <div class="sa-testimonial-role">Sound Engineer, Mumbai</div>
+      </div>
+      <div class="sa-testimonial-card">
+        <div class="sa-testimonial-stars">★★★★★</div>
+        <p class="sa-testimonial-text">"The IoT monitoring blew my mind. I could see exactly how our rented speakers were performing, live, during the show."</p>
+        <div class="sa-testimonial-author">Priya Sharma</div>
+        <div class="sa-testimonial-role">Event Director, Pune</div>
+      </div>
+      <div class="sa-testimonial-card">
+        <div class="sa-testimonial-stars">★★★★★</div>
+        <p class="sa-testimonial-text">"Finally, a rental platform that feels as premium as the gear it offers. The booking flow is flawless."</p>
+        <div class="sa-testimonial-author">Kai Nakamura</div>
+        <div class="sa-testimonial-role">DJ & Producer</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ACT V: FINAL CTA ── -->
+<section class="sa-cta-section reveal">
+  <div class="container">
+    <div class="sa-cta-card">
+      <div class="sa-cta-card__glow"></div>
+      <h2 class="sa-cta-title">Ready to Elevate<br>Your Next Event?</h2>
+      <p class="sa-cta-sub">Join StageAlpha and access professional-grade equipment with intelligent pricing, real-time monitoring, and seamless booking.</p>
+      <div class="sa-cta-actions">
+        <a href="#!/register" class="btn btn-primary btn-xl">Create Account</a>
+        <a href="#!/equipment" class="btn btn-outline btn-xl">Browse Equipment</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&display=swap');
+</style>
+
+<!-- Particle animation & scroll counter script -->
+<script>
+(function() {
+  // ── Particle System ──
+  var canvas = document.getElementById('heroParticles');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var particles = [];
+  var PARTICLE_COUNT = 60;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function Particle() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.size = Math.random() * 2 + 0.5;
+    this.speedY = -(Math.random() * 0.3 + 0.1);
+    this.speedX = (Math.random() - 0.5) * 0.2;
+    this.opacity = Math.random() * 0.5 + 0.1;
+    this.color = Math.random() > 0.5 ? '108,99,255' : '0,229,255';
+  }
+  Particle.prototype.update = function() {
+    this.y += this.speedY;
+    this.x += this.speedX;
+    if (this.y < -10) { this.y = canvas.height + 10; this.x = Math.random() * canvas.width; }
+  };
+  Particle.prototype.draw = function() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(' + this.color + ',' + this.opacity + ')';
+    ctx.fill();
+  };
+
+  for (var i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(function(p) { p.update(); p.draw(); });
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // ── Counter animation ──
+  var statObserver = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        var el = e.target;
+        var target = parseInt(el.getAttribute('data-target'));
+        var current = 0;
+        var step = Math.max(1, Math.floor(target / 60));
+        var timer = setInterval(function() {
+          current += step;
+          if (current >= target) { current = target; clearInterval(timer); }
+          el.textContent = current + (target === 99 ? '%' : '+');
+        }, 30);
+        statObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.sa-stat__value').forEach(function(el) {
+    statObserver.observe(el);
+  });
+
+  // ── Parallax on hero ──
+  var hero = document.getElementById('heroSection');
+  if (hero) {
+    window.addEventListener('scroll', function() {
+      var st = window.scrollY;
+      var floraL = hero.querySelector('.sa-hero__flora--left');
+      var floraR = hero.querySelector('.sa-hero__flora--right');
+      var arch = hero.querySelector('.sa-hero__arch');
+      var orbit = hero.querySelector('.sa-hero__orbit');
+      if (floraL) floraL.style.transform = 'translateY(' + (st * 0.25) + 'px) scale(' + (1 + st * 0.0003) + ')';
+      if (floraR) floraR.style.transform = 'translateY(' + (st * 0.15) + 'px) scale(' + (1 + st * 0.0002) + ')';
+      if (arch)   arch.style.transform = 'translateY(' + (st * 0.08) + 'px)';
+      if (orbit)  orbit.style.opacity = Math.max(0, 1 - st * 0.002);
+    });
+  }
+})();
+</script>
