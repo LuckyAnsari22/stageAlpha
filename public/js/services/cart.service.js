@@ -52,7 +52,9 @@ angular.module('stageAlpha')
     },
     clear: function() { $window.localStorage.removeItem(cartKey); },
     count: function() {
-      return getCart().reduce(function(sum, item) { return sum + item.qty; }, 0);
+      var cart = getCart();
+      if (!cart || cart.length === 0) return 0;
+      return cart.reduce(function(sum, item) { return sum + (item.qty || 0); }, 0);
     }
   };
 }]);

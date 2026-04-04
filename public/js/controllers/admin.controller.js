@@ -82,12 +82,7 @@ function($scope, $http, ToastService) {
         }
       });
     }, 500);
-  }).catch(function(err) {
-    ToastService.show('Error loading revenue data: ' + (err.data?.message || 'Unknown error'), 'error');
-  });
-          }
-        }
-      });
-    }, 200);
-  }).catch(function() {});
+   }).catch(function(err) {
+     ToastService.show('Error loading revenue data: ' + (err.data?.message || 'Unknown error'), 'error');
+   });
 }]);
