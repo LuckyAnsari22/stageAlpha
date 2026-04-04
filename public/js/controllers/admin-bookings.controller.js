@@ -81,8 +81,15 @@ function($scope, $http, $timeout, ToastService) {
     if (!booking) booking = $scope.selectedBooking;
     if (!booking) return;
 
+    // Use booking_id from API, or id if it exists
+    var bookingId = booking.booking_id || booking.id;
+    if (!bookingId) {
+      ToastService.show('Error: Booking ID not found', 'error');
+      return;
+    }
+
     var payload = { status: 'confirmed' };
-    $http.patch('/api/v1/bookings/' + booking.id + '/status', payload)
+    $http.patch('/api/v1/bookings/' + bookingId + '/status', payload)
       .then(function() {
         ToastService.show('Booking confirmed!', 'success');
         booking.status = 'confirmed';
@@ -101,8 +108,15 @@ function($scope, $http, $timeout, ToastService) {
 
     if (!confirm('Are you sure you want to cancel this booking?')) return;
 
+    // Use booking_id from API, or id if it exists
+    var bookingId = booking.booking_id || booking.id;
+    if (!bookingId) {
+      ToastService.show('Error: Booking ID not found', 'error');
+      return;
+    }
+
     var payload = { status: 'cancelled' };
-    $http.patch('/api/v1/bookings/' + booking.id + '/status', payload)
+    $http.patch('/api/v1/bookings/' + bookingId + '/status', payload)
       .then(function() {
         ToastService.show('Booking cancelled', 'success');
         booking.status = 'cancelled';
@@ -119,8 +133,15 @@ function($scope, $http, $timeout, ToastService) {
     if (!booking) booking = $scope.selectedBooking;
     if (!booking) return;
 
+    // Use booking_id from API, or id if it exists
+    var bookingId = booking.booking_id || booking.id;
+    if (!bookingId) {
+      ToastService.show('Error: Booking ID not found', 'error');
+      return;
+    }
+
     var payload = { status: 'completed' };
-    $http.patch('/api/v1/bookings/' + booking.id + '/status', payload)
+    $http.patch('/api/v1/bookings/' + bookingId + '/status', payload)
       .then(function() {
         ToastService.show('Booking completed!', 'success');
         booking.status = 'completed';

@@ -12,6 +12,7 @@ function($scope, $http, $timeout, ToastService) {
   };
   
   $scope.recentBookings = [];
+  var revenueChart = null; // Store chart instance
 
   // Load dashboard data
   function loadDashboard() {
@@ -52,7 +53,12 @@ function($scope, $http, $timeout, ToastService) {
     // Revenue chart
     var revenueCtx = document.getElementById('revenueChart');
     if (revenueCtx && typeof Chart !== 'undefined') {
-      new Chart(revenueCtx, {
+      // Destroy old chart if it exists
+      if (revenueChart) {
+        revenueChart.destroy();
+      }
+      
+      revenueChart = new Chart(revenueCtx, {
         type: 'line',
         data: {
           labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -90,5 +96,12 @@ function($scope, $http, $timeout, ToastService) {
       });
     }
   }, 500);
+
+  // Cleanup on destroy
+  $scope.$on('$destroy', function() {
+    if (revenueChart) {
+      revenueChart.destroy();
+    }
+  });
 
 }]);
