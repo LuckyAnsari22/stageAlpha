@@ -1,8 +1,10 @@
-# Dependecies
+# Dependencies
 node_modules/
 
-# Environment Variables
+# Environment Variables (NEVER commit secrets)
 .env
+.env.local
+.env.production
 
 # Logs
 *.log
@@ -13,6 +15,7 @@ yarn-error.log*
 # System Files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Testing
 coverage/
@@ -21,3 +24,22 @@ coverage/
 # Build
 dist/
 build/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Debug/diagnostic output
+check.log
+query_output.txt
+
+# OS generated files
+*.tmp
+*.bak
+*.orig
