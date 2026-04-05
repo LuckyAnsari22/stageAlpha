@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: stagealpha-app
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stagealpha-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
+
+databases:
+  - name: stagealpha-db
+    databaseName: stagealpha
+    user: stagealpha
+    plan: free
+    region: oregon
