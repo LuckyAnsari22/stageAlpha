@@ -66,6 +66,25 @@ app.use('/api/v1/quotes',        require('./routes/quotes'))
 app.use('/api/v1/notifications', require('./routes/notifications'))
 app.use('/api/v1/staff',         require('./routes/staff'))
 app.use('/api/v1/intelligence',  require('./routes/intelligence'))
+
+// TEMPORARY DB INIT ENDPOINT to force Render to populate
+app.get('/api/v1/force-init', async (req, res) => {
+  try {
+    const { exec } = require('child_process');
+    exec('node db/safe-migrate.js', (err, stdout, stderr) => {
+      res.send(`
+        <html><body>
+        <h2>Database Initialization Result</h2>
+        <pre style="background:#eee;padding:10px;">${stdout}</pre>
+        <pre style="color:red;">${stderr}</pre>
+        ${err ? '<h3 style="color:red">ERROR: ' + err.message + '</h3>' : '<h3 style="color:green">SUCCESS! Now return to your app.</h3>'}
+        </body></html>
+      `);
+    });
+  } catch (e) {
+    res.status(500).send(e.toString());
+  }
+});
 // Health check with DB verification
 app.get('/api/v1/health', async (req, res) => {
   try {
