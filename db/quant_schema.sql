@@ -38,10 +38,10 @@ RETURNS TABLE (coeff NUMERIC, r2 NUMERIC, obs BIGINT) AS $$
 BEGIN
     RETURN QUERY
     SELECT 
-        ROUND(REGR_SLOPE(LN(NULLIF(quantity, 0)), LN(NULLIF(price, 0)))::NUMERIC, 4) AS coeff,
-        ROUND(REGR_R2(LN(NULLIF(quantity, 0)), LN(NULLIF(price, 0)))::NUMERIC, 4) AS r2,
+        ROUND(REGR_SLOPE(LN(NULLIF(qty, 0)), LN(NULLIF(final_price, 0)))::NUMERIC, 4) AS coeff,
+        ROUND(REGR_R2(LN(NULLIF(qty, 0)), LN(NULLIF(final_price, 0)))::NUMERIC, 4) AS r2,
         COUNT(id) AS obs
     FROM booking_items
-    WHERE equipment_id = p_equipment_id AND quantity > 0 AND price > 0;
+    WHERE equipment_id = p_equipment_id AND qty > 0 AND final_price > 0;
 END;
 $$ LANGUAGE plpgsql;
