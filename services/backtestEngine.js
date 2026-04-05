@@ -333,6 +333,8 @@ class BacktestEngine {
         db_id: result.rows[0].id,
         improvement_pct: result.rows[0].improvement_pct
       });
+      // Auto-cleanup after 1 hour to prevent memory leaks
+      setTimeout(() => this.inProgress.delete(backtestId), 3600000);
     }
   }
 
