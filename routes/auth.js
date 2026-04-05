@@ -57,11 +57,14 @@ router.post('/register', register, registerValidation, handleValidation, async (
   }
 });
 
+// Pre-generate a valid bcrypt hash for constant-time comparison (timing attack prevention)
+let DUMMY_HASH = '$2a$12$K4GtT4H7LhO.QIBR7FnW4OqH8B5p5XdMlvV.j0L2.S3dYz8WVyC6';
+(async () => { try { DUMMY_HASH = await bcrypt.hash('timing_attack_prevention_salt', config.security.bcryptRounds); } catch {} })();
+
 // POST /api/v1/auth/login
 router.post('/login', login, loginValidation, handleValidation, async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const DUMMY_HASH = '$2a$12$invalidhashtopreventtimingattacksxxxxxxxxxxxxxxxxxxx';
 
     // 1. Find customer by email
     const result = await pool.query(
@@ -116,16 +119,28 @@ router.post('/login', login, loginValidation, handleValidation, async (req, res,
 // POST /api/v1/auth/google
 router.post('/google', async (req, res, next) => {
   try {
-    // In production, verify the ID token using google-auth-library
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Google ID token is required' });
+    }
+    
+    // In production: verify the ID token using google-auth-library
     // const { OAuth2Client } = require('google-auth-library');
     // const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-    // const ticket = await client.verifyIdToken({ idToken: req.body.token, audience: process.env.GOOGLE_CLIENT_ID });
+    // const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
     // const payload = ticket.getPayload();
     // const email = payload.email; const name = payload.name;
     
-    // MOCK PAYLOAD FOR DEMO:
-    const email = 'google.user@stagealpha.com';
-    const name = 'Google Guest';
+    // Demo mode: decode token as base64 email or use a safe default
+    let email, name;
+    try {
+      const decoded = JSON.parse(Buffer.from(token, 'base64').toString());
+      email = decoded.email || `demo_${Date.now()}@stagealpha.com`;
+      name = decoded.name || 'Google User';
+    } catch {
+      email = `demo_${Date.now()}@stagealpha.com`;
+      name = 'Google User';
+    }
     
     // Find customer by email
     const result = await pool.query('SELECT id, name, email, role, is_active FROM customers WHERE email = $1', [email]);

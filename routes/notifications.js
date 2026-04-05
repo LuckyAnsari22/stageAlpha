@@ -13,8 +13,11 @@ router.get('/', authenticate, async (req, res, next) => {
     `, [req.user.id]);
     res.json({ success: true, data: rows });
   } catch (err) {
-    // If table missing, return empty
-    res.json({ success: true, data: [] });
+    // Only return empty if the notifications table doesn't exist yet
+    if (err.code === '42P01') { // relation does not exist
+      return res.json({ success: true, data: [] });
+    }
+    next(err);
   }
 });
 
@@ -27,8 +30,10 @@ router.get('/unread-count', authenticate, async (req, res, next) => {
     `, [req.user.id]);
     res.json({ success: true, count: rows[0].count });
   } catch (err) {
-    // If table missing, return 0
-    res.json({ success: true, count: 0 });
+    if (err.code === '42P01') {
+      return res.json({ success: true, count: 0 });
+    }
+    next(err);
   }
 });
 

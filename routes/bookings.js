@@ -13,16 +13,17 @@ router.post('/', authenticate, bookingValidation, handleValidation, async (req, 
     
     await client.query('BEGIN');
     
-    // 1. Lock equipment rows to prevent race conditions
-    await client.query(
+    // 1. Lock equipment rows to prevent race conditions & get stock in single query
+    const { rows: lockedRows } = await client.query(
       'SELECT id, stock_qty FROM equipment WHERE id = ANY($1) FOR UPDATE',
       [items.map(i => i.equipment_id)]
     );
+    const stockMap = new Map(lockedRows.map(r => [r.id, r.stock_qty]));
     
-    // 2. Check all items have sufficient stock
+    // 2. Check all items have sufficient stock using locked data
     for (const item of items) {
-      const { rows } = await client.query('SELECT stock_qty FROM equipment WHERE id = $1', [item.equipment_id]);
-      if (!rows[0] || rows[0].stock_qty < item.qty) {
+      const availableQty = stockMap.get(item.equipment_id);
+      if (availableQty === undefined || availableQty < item.qty) {
         throw new ApiError(400, `Insufficient stock for equipment ${item.equipment_id}`);
       }
     }
@@ -199,23 +200,24 @@ router.patch('/:id/status', authenticate, async (req, res, next) => {
 
     const booking = rows[0];
 
-    // Note: Database trigger handles stock restoration automatically if "deleted"
-    // Wait; if it's "cancelled", stock restoration might be mapped in the schema logic
-    
+    // Emit real-time update via Socket.IO
     const socketService = require('../services/socket');
-    if (socketService.emitBookingUpdated) {
-      socketService.emitBookingUpdated(req.params.id, status);
+    if (socketService.emitBookingStatusUpdate) {
+      socketService.emitBookingStatusUpdate(req.params.id, status);
     }
 
-    if (status === 'confirmed') {
-      const { createNotification } = require('../services/socket');
-      await createNotification(
-        booking.customer_id,
-        'booking_confirmed',
-        'Booking Confirmed! 🎉',
-        `Your booking #${booking.id} for ${booking.event_date.toISOString().slice(0,10)} has been confirmed.`,
-        '/bookings/' + booking.id
-      );
+    if (status === 'confirmed' && booking.customer_id) {
+      try {
+        await socketService.createNotification(
+          booking.customer_id,
+          'booking_confirmed',
+          'Booking Confirmed! 🎉',
+          `Your booking #${booking.id} for ${booking.event_date.toISOString().slice(0,10)} has been confirmed.`,
+          '/bookings/' + booking.id
+        );
+      } catch (notifErr) {
+        console.warn('[Booking] Notification failed:', notifErr.message);
+      }
     }
 
     res.json({ success: true, data: booking });
