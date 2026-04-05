@@ -125,6 +125,11 @@ function emitNewBooking(data) {
   io.to('admin:all').emit('booking:new', data)
 }
 
+function emitBookingStatusUpdate(bookingId, status) {
+  if (!io) return
+  io.to('admin:all').emit('booking:status_updated', { booking_id: bookingId, status, timestamp: new Date().toISOString() })
+}
+
 async function emitAdminDashboardUpdate() {
   if (!io || adminConnections.size === 0) return;
   
@@ -158,4 +163,4 @@ async function emitAdminDashboardUpdate() {
   }
 }
 
-module.exports = { init, emitInventoryUpdate, emitPriceUpdate, emitBacktestComplete, emitNewBooking, createNotification, emitAdminDashboardUpdate }
+module.exports = { init, emitInventoryUpdate, emitPriceUpdate, emitBacktestComplete, emitNewBooking, emitBookingStatusUpdate, createNotification, emitAdminDashboardUpdate }
