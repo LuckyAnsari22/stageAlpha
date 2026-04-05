@@ -11,7 +11,13 @@ router.get('/search', async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 5;
     if (!q) return res.json({ success: true, data: [] });
 
-    const formattedQuery = q.trim().replace(/\s+/g, ' & ');
+    // Escape special tsquery characters and build a safe query
+    const sanitized = q.trim()
+      .replace(/[&|!:*()'"\\<>]/g, ' ')  // Remove tsquery special chars
+      .replace(/\s+/g, ' ')               // Collapse whitespace
+      .trim();
+    if (!sanitized) return res.json({ success: true, data: [] });
+    const formattedQuery = sanitized.split(' ').filter(Boolean).join(' & ');
 
     const { rows } = await pool.query(`
       SELECT *, ts_rank(search_vector, to_tsquery('english', $1)) AS rank
@@ -298,6 +304,42 @@ router.patch('/:id', authenticate, requireAdmin, async (req, res, next) => {
     await invalidatePattern('equipment:list:*');
 
     res.json({ success: true, data: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 8. DELETE /api/v1/equipment/:id
+router.delete('/:id', authenticate, requireAdmin, async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    
+    // Check if equipment has active bookings
+    const { rows: activeBookings } = await pool.query(`
+      SELECT COUNT(*)::int AS count FROM booking_items bi
+      JOIN bookings b ON bi.booking_id = b.id
+      WHERE bi.equipment_id = $1 AND b.status IN ('pending', 'confirmed')
+    `, [id]);
+    
+    if (activeBookings[0].count > 0) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Cannot delete equipment with active bookings. Cancel or complete bookings first.' 
+      });
+    }
+
+    // Soft delete by deactivating (safer for referential integrity)
+    const { rows } = await pool.query(
+      'UPDATE equipment SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING id, name',
+      [id]
+    );
+    
+    if (!rows[0]) return res.status(404).json({ success: false, message: 'Equipment not found' });
+
+    await invalidate(`equipment:${id}`);
+    await invalidatePattern('equipment:list:*');
+
+    res.json({ success: true, message: 'Equipment "' + rows[0].name + '" deleted successfully' });
   } catch (err) {
     next(err);
   }

@@ -31,14 +31,16 @@ router.get('/estimate/:equipment_id', async (req, res, next) => {
 // POST /api/v1/pricing/update-all
 router.post('/update-all', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM run_batch_price_update()');
+    const startTime = Date.now();
+    await pool.query('CALL batch_update_prices()');
+    const elapsed = Date.now() - startTime;
     
     // Emit batch completion to the socket mesh
     if (socketService.emitPriceUpdate) {
-      socketService.emitPriceUpdate({ type: 'batch_complete', count: rows.length, timestamp: new Date() });
+      socketService.emitPriceUpdate({ type: 'batch_complete', elapsed_ms: elapsed, timestamp: new Date() });
     }
 
-    res.json({ success: true, data: rows, message: 'Batch background price update completed' });
+    res.json({ success: true, data: { status: 'complete', elapsed_ms: elapsed }, message: 'Batch price update completed' });
   } catch (err) {
     next(err);
   }

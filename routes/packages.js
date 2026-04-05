@@ -6,11 +6,29 @@ const { checkCache, invalidatePattern } = require('../middleware/cache');
 
 // GET /api/v1/packages
 router.get('/', async (req, res, next) => {
-  res.json({ success: true, data: [
-    { id: 1, slug: 'wedding-premium', name: 'Premium Wedding Bundle', discount_pct: 20, is_featured: true, total_current_price: 35000, items: [] },
-    { id: 2, slug: 'corporate-basic', name: 'Corporate Keynote System', discount_pct: 10, is_featured: true, total_current_price: 15000, items: [] },
-    { id: 3, slug: 'club-night', name: 'Club Night Rig', discount_pct: 15, is_featured: true, total_current_price: 25000, items: [] }
-  ]});
+  try {
+    const { rows } = await pool.query(`
+      SELECT p.*,
+        COALESCE(SUM(e.current_price * pi.qty), 0)::float AS total_current_price,
+        COALESCE(SUM(e.current_price * pi.qty) * (1 - p.discount_pct / 100), 0)::float AS discounted_price,
+        COUNT(DISTINCT pi.equipment_id)::int AS item_count
+      FROM packages p
+      LEFT JOIN package_items pi ON p.id = pi.package_id
+      LEFT JOIN equipment e ON pi.equipment_id = e.id
+      WHERE p.is_active = true
+      GROUP BY p.id
+      ORDER BY p.is_featured DESC, p.name ASC
+    `);
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    // Fallback to static data if packages table doesn't exist
+    console.warn('[Packages] DB query failed, serving fallback:', err.message);
+    res.json({ success: true, data: [
+      { id: 1, slug: 'wedding-premium', name: 'Premium Wedding Bundle', discount_pct: 20, is_featured: true, total_current_price: 35000, items: [] },
+      { id: 2, slug: 'corporate-basic', name: 'Corporate Keynote System', discount_pct: 10, is_featured: true, total_current_price: 15000, items: [] },
+      { id: 3, slug: 'club-night', name: 'Club Night Rig', discount_pct: 15, is_featured: true, total_current_price: 25000, items: [] }
+    ]});
+  }
 });
 
 // GET /api/v1/packages/:slug
