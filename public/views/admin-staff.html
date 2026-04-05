@@ -1,86 +1,109 @@
-<div class="page">
-  <div class="admin-tabs mb-5">
-    <a href="#!/admin" class="admin-tab">Dashboard</a>
-    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
-    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
-    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
-    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
-    <a href="#!/admin/staff" class="admin-tab active">Staff</a>
-    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
-  </div>
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span>Stage</span><span class="brand-alt">Alpha</span>
+      </div>
+    </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">Logout</button>
+    </div>
+  </aside>
 
-  <div class="page-header">
-    <div>
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">☰</button>
       <h1 class="page-title">Staff Management</h1>
-      <p class="page-sub">Manage operators, technicians, and drivers</p>
-    </div>
-    <button class="btn btn-primary btn-sm" ng-click="showAddForm = !showAddForm">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Add Staff
-    </button>
-  </div>
-
-  <!-- Add Staff Form -->
-  <div class="card mb-5 fade-in" ng-show="showAddForm">
-    <h4 class="mb-3">Add New Staff Member</h4>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Name</label>
-        <input type="text" class="input" ng-model="newStaff.name" placeholder="Full name">
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser.name.charAt(0).toUpperCase()}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser.name}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Role</label>
-        <select class="input" ng-model="newStaff.role">
-          <option value="Operator">Operator</option>
-          <option value="Technician">Technician</option>
-          <option value="Driver">Driver</option>
-          <option value="Assistant">Assistant</option>
-          <option value="Manager">Manager</option>
-        </select>
-      </div>
-    </div>
-    <div class="flex gap-2">
-      <button class="btn btn-primary btn-sm" ng-click="addStaff()" ng-disabled="!newStaff.name || !newStaff.role">Save</button>
-      <button class="btn btn-ghost btn-sm" ng-click="showAddForm = false">Cancel</button>
-    </div>
-  </div>
+    </header>
 
-  <!-- Staff Table -->
-  <div class="data-table-wrap">
-    <div class="data-table-head">
-      <span class="heading-sm">Staff Members ({{staff.length}})</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-          <th>Role</th>
-          <th>Status</th>
-          <th>Assignments</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="s in staff track by s.id">
-          <td class="font-mono text-3">#{{s.id}}</td>
-          <td class="text-1" style="font-weight:500;">{{s.name}}</td>
-          <td><span class="badge badge-brand">{{s.role}}</span></td>
-          <td>
-            <span class="badge" ng-class="{'badge-success': s.is_available, 'badge-danger': !s.is_available}">
-              {{s.is_available ? 'Available' : 'Busy'}}
-            </span>
-          </td>
-          <td class="font-mono">{{s.assignment_count || 0}}</td>
-          <td>
-            <div class="flex gap-1">
-              <button class="btn btn-ghost btn-sm" ng-click="toggleAvailability(s)">
-                {{s.is_available ? 'Set Busy' : 'Set Available'}}
-              </button>
+    <main class="admin-content">
+      <div ng-controller="AdminStaffCtrl">
+
+        <div class="dashboard-header">
+          <h2>Staff Members</h2>
+          <button class="btn btn-primary" ng-click="showAddForm = !showAddForm">
+            + Add Staff
+          </button>
+        </div>
+
+        <!-- Add Staff Form -->
+        <div class="card mb-5 fade-in" ng-show="showAddForm" style="background:var(--admin-card-bg); border:1px solid var(--admin-border); border-radius:12px; padding:24px; margin-bottom:24px;">
+          <h4 style="margin-bottom:16px; color:var(--admin-text);">Add New Staff Member</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+            <div>
+              <label style="display:block; margin-bottom:6px; color:var(--admin-text-muted); font-size:13px;">Name</label>
+              <input type="text" ng-model="newStaff.name" placeholder="Full name" style="width:100%; padding:10px; background:var(--admin-dark-bg); border:1px solid var(--admin-border); border-radius:8px; color:var(--admin-text);">
             </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+            <div>
+              <label style="display:block; margin-bottom:6px; color:var(--admin-text-muted); font-size:13px;">Role</label>
+              <select ng-model="newStaff.role" style="width:100%; padding:10px; background:var(--admin-dark-bg); border:1px solid var(--admin-border); border-radius:8px; color:var(--admin-text);">
+                <option value="Operator">Operator</option>
+                <option value="Technician">Technician</option>
+                <option value="Driver">Driver</option>
+                <option value="Assistant">Assistant</option>
+                <option value="Manager">Manager</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-primary" ng-click="addStaff()" ng-disabled="!newStaff.name || !newStaff.role">Save</button>
+            <button class="btn btn-secondary" ng-click="showAddForm = false" style="background:transparent; border:1px solid var(--admin-border); color:var(--admin-text);">Cancel</button>
+          </div>
+        </div>
+
+        <!-- Staff Table -->
+        <div style="background:var(--admin-card-bg); border:1px solid var(--admin-border); border-radius:12px; overflow:hidden;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Assignments</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="s in staff track by s.id">
+                <td class="booking-id">#{{s.id}}</td>
+                <td style="font-weight:500; color:var(--admin-text);">{{s.name}}</td>
+                <td><span class="badge status-confirmed">{{s.role}}</span></td>
+                <td>
+                  <span class="badge" ng-class="{'status-completed': s.is_available, 'status-cancelled': !s.is_available}">
+                    {{s.is_available ? 'Available' : 'Busy'}}
+                  </span>
+                </td>
+                <td style="font-family:monospace;">{{s.assignment_count || 0}}</td>
+                <td>
+                  <button class="btn-small" ng-click="toggleAvailability(s)" style="background:rgba(108,99,255,0.2); color:var(--admin-primary); border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px;">
+                    {{s.is_available ? 'Set Busy' : 'Set Available'}}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="empty-state" ng-show="staff.length === 0">
+            <p>No staff members yet</p>
+          </div>
+        </div>
+
+      </div>
+    </main>
   </div>
 </div>

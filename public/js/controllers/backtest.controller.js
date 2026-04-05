@@ -8,14 +8,14 @@ function($scope, $http, ToastService) {
   $scope.historicalResults = [];
 
   // Load historical results
-  $http.get('/api/v1/pricing/backtest-results').then(function(res) {
+  $http.get('/api/v1/backtest/results').then(function(res) {
     $scope.historicalResults = res.data.data || res.data || [];
   }).catch(function() {});
 
   $scope.runBacktest = function() {
     $scope.running = true;
     $scope.result = null;
-    $http.post('/api/v1/pricing/backtest', {
+    $http.post('/api/v1/backtest/run', {
       start_date: $scope.backtest.startDate,
       end_date: $scope.backtest.endDate
     }).then(function(res) {

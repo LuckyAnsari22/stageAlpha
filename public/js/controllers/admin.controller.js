@@ -57,7 +57,7 @@ function($scope, $http, ToastService) {
   $http.get('/api/v1/analytics/monthly-revenue').then(function(res) {
     var data = res.data.data || res.data || [];
     setTimeout(function() {
-      var ctx = document.getElementById('revenueChart');
+      var ctx = document.getElementById('classicRevenueChart');
       if (!ctx || data.length === 0) return;
       new Chart(ctx, {
         type: 'bar',

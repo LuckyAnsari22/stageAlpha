@@ -22,7 +22,7 @@ function($scope, $http, ToastService) {
   };
 
   $scope.toggleAvailability = function(s) {
-    $http.patch('/api/v1/staff/' + s.id, { is_available: !s.is_available }).then(function() {
+    $http.patch('/api/v1/staff/' + s.id + '/availability', { is_available: !s.is_available }).then(function() {
       s.is_available = !s.is_available;
     }).catch(function() {});
   };

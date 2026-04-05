@@ -30,6 +30,8 @@ function($scope, $http) {
   function renderRevenueChart() {
     var ctx = document.getElementById('revenueTimeChart');
     if (!ctx || $scope.monthlyRevenue.length === 0) return;
+    var existing = Chart.getChart('revenueTimeChart');
+    if (existing) existing.destroy();
     new Chart(ctx, {
       type: 'line',
       data: {

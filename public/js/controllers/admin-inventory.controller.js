@@ -40,8 +40,8 @@ function($scope, $http, ToastService) {
           return {
             id: item.id,
             name: item.name,
-            category: getCategoryName(item.category_id),
-            category_id: item.category_id,
+            category: item.category || getCategoryName(item.category_id),
+            category_id: item.category_id || $scope.categories.indexOf(item.category) + 1,
             description: item.description,
             price_per_day: item.base_price || item.current_price || 0,
             base_price: item.base_price,
@@ -111,7 +111,7 @@ function($scope, $http, ToastService) {
     $scope.form = {
       id: item.id,
       name: item.name,
-      category: getCategoryName(item.category_id),  // Convert ID back to name
+      category: item.category || getCategoryName(item.category_id),
       description: item.description,
       price_per_day: item.base_price || item.current_price || 0,
       quantity: item.stock_qty || 0,

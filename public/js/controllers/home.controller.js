@@ -48,60 +48,98 @@ function($scope, $rootScope, $http, AuthService) {
     $scope.error = true;
   });
 
-  // AUDIO VISUALIZER CANVAS (Visible WOW Factor)
+  // ── Particle simulation, Parallax & Counters ──
   setTimeout(function() {
-    var canvas = document.getElementById('visualizerCanvas');
+    // 1. Counters
+    var statObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          var el = e.target;
+          var target = parseInt(el.getAttribute('data-target')) || 0;
+          var current = 0;
+          var step = Math.max(1, Math.floor(target / 60));
+          var timer = setInterval(function() {
+            current += step;
+            if (current >= target) { current = target; clearInterval(timer); }
+            el.textContent = current + (target === 99 ? '%' : '+');
+          }, 30);
+          statObserver.unobserve(el);
+        }
+      });
+    }, { threshold: 0.5 });
+    document.querySelectorAll('.sa-stat__value').forEach(function(el) {
+      statObserver.observe(el);
+    });
+
+    // 2. Parallax
+    var hero = document.getElementById('heroSection');
+    if (hero) {
+      var scrollHandler = function() {
+        var st = window.scrollY;
+        var floraL = hero.querySelector('.sa-hero__flora--left');
+        var floraR = hero.querySelector('.sa-hero__flora--right');
+        var arch = hero.querySelector('.sa-hero__arch');
+        var orbit = hero.querySelector('.sa-hero__orbit');
+        if (floraL) floraL.style.transform = 'translateY(' + (st * 0.25) + 'px) scale(' + (1 + st * 0.0003) + ')';
+        if (floraR) floraR.style.transform = 'translateY(' + (st * 0.15) + 'px) scale(' + (1 + st * 0.0002) + ')';
+        if (arch)   arch.style.transform = 'translateY(' + (st * 0.08) + 'px)';
+        if (orbit)  orbit.style.opacity = Math.max(0, 1 - st * 0.002);
+      };
+      window.addEventListener('scroll', scrollHandler);
+      $scope.$on('$destroy', function() {
+        window.removeEventListener('scroll', scrollHandler);
+      });
+    }
+
+    // 3. Ambient Particle Canvas
+    var canvas = document.getElementById('heroParticles');
     if (!canvas) return;
     var ctx = canvas.getContext('2d');
-    
-    // Resize canvas
+    var particles = [];
+    var PARTICLE_COUNT = 60;
+    var animFrame;
+
     function resize() {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resize);
     resize();
+    window.addEventListener('resize', resize);
+    $scope.$on('$destroy', function() {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animFrame);
+    });
 
-    var bars = 60;
-    var barWidth = 0;
-    var barHeights = [];
-    var targetHeights = [];
-
-    // Initialize random bars
-    for(var i = 0; i < bars; i++) {
-      barHeights.push(Math.random() * 50);
-      targetHeights.push(Math.random() * 200 + 20);
+    function Particle() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 2 + 0.5;
+      this.speedY = -(Math.random() * 0.3 + 0.1);
+      this.speedX = (Math.random() - 0.5) * 0.2;
+      this.opacity = Math.random() * 0.5 + 0.1;
+      this.color = Math.random() > 0.5 ? '108,99,255' : '0,229,255';
     }
+    Particle.prototype.update = function() {
+      this.y += this.speedY;
+      this.x += this.speedX;
+      if (this.y < -10) { this.y = canvas.height + 10; this.x = Math.random() * canvas.width; }
+    };
+    Particle.prototype.draw = function() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + this.color + ',' + this.opacity + ')';
+      ctx.fill();
+    };
 
-    function animateVisualizer() {
-      if (!document.getElementById('visualizerCanvas')) return; // Cleanup if route changes
-      
+    for (var i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+    function animate() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      barWidth = (canvas.width / bars) - 2;
-      
-      var gradient = ctx.createLinearGradient(0, canvas.height, 0, 0);
-      gradient.addColorStop(0, "rgba(0, 240, 255, 0.1)");
-      gradient.addColorStop(0.5, "rgba(108, 99, 255, 0.4)");
-      gradient.addColorStop(1, "rgba(0, 240, 255, 0.8)");
-
-      for(var i = 0; i < bars; i++) {
-        // Move current height towards target
-        barHeights[i] += (targetHeights[i] - barHeights[i]) * 0.1;
-
-        // If close to target, generate new target
-        if(Math.abs(targetHeights[i] - barHeights[i]) < 2) {
-          // Keep sides lower, middle higher (simulating realistic spectrum)
-          var multiplier = Math.sin((i / bars) * Math.PI) * 250;
-          targetHeights[i] = Math.random() * multiplier + 10;
-        }
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(i * (barWidth + 2), canvas.height - barHeights[i], barWidth, barHeights[i]);
-      }
-      requestAnimationFrame(animateVisualizer);
+      particles.forEach(function(p) { p.update(); p.draw(); });
+      animFrame = requestAnimationFrame(animate);
     }
-    
-    animateVisualizer();
+    animate();
+
   }, 100);
 
 }]);

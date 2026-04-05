@@ -1,0 +1,375 @@
+<!-- ADMIN REPORTS PAGE -->
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  
+  <!-- SIDEBAR NAVIGATION -->
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"></rect>
+          <rect x="14" y="3" width="7" height="7"></rect>
+          <rect x="14" y="14" width="7" height="7"></rect>
+          <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span>Stage</span><span class="brand-alt">Alpha</span>
+      </div>
+      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="sidebarOpen">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="admin-main">
+    
+    <!-- TOP NAVIGATION BAR -->
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+
+      <h1 class="page-title">Reports & Analytics</h1>
+
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser.name.charAt(0).toUpperCase()}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser.name}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
+        
+        <button class="btn btn-icon" ng-click="logout()" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT AREA -->
+    <main class="admin-content">
+
+      <!-- REPORTS PAGE -->
+      <div class="admin-reports" ng-controller="AdminReportsCtrl">
+
+        <!-- PAGE HEADER -->
+        <div class="page-header">
+          <div class="header-left">
+            <h2>Financial & Business Reports</h2>
+            <p class="subtitle">Real-time analytics and performance metrics</p>
+          </div>
+          <div class="header-right">
+            <button class="btn btn-secondary" ng-click="exportReport(activeReport)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v20m10-10H2"></path>
+              </svg>
+              Export
+            </button>
+            <button class="btn btn-secondary" ng-click="refreshReports()" ng-disabled="isLoading">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 4v6h-6"></path>
+                <path d="M1 20v-6h6"></path>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- REPORT SELECTOR -->
+        <div class="report-selector">
+          <button class="report-tab" ng-repeat="report in reportTypes" 
+                  ng-click="selectReport(report)" 
+                  ng-class="{'active': activeReport === report}">
+            <span class="tab-icon">📊</span>
+            <span>{{report}}</span>
+          </button>
+        </div>
+
+        <!-- DATE RANGE FILTER -->
+        <div class="date-filter">
+          <div class="filter-group">
+            <label>Date Range:</label>
+            <select ng-model="dateRange" ng-change="updateDateRange()" class="filter-select">
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="date-info">{{getDateRangeLabel()}}</span>
+          </div>
+        </div>
+
+        <!-- LOADING STATE -->
+        <div ng-show="isLoading" class="loading-state">
+          <div class="loading-spinner"></div>
+          <p>Generating report...</p>
+        </div>
+
+        <!-- REPORT CONTENT -->
+        <div ng-hide="isLoading" class="report-content">
+
+          <!-- REVENUE REPORT -->
+          <div ng-show="activeReport === 'Revenue'" class="report-section">
+            <div class="stats-grid">
+              <div class="stat-card large">
+                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">₹{{revenueData.total | number:0}}</div>
+                <div class="stat-subtext">{{revenueData.count}} transactions</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Average Booking</div>
+                <div class="stat-value">₹{{revenueData.average | number:0}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Highest Booking</div>
+                <div class="stat-value">₹{{revenueData.highest | number:0}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Daily Average</div>
+                <div class="stat-value">₹{{revenueData.dailyAvg | number:0}}</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h3>Revenue Trend</h3>
+              <canvas id="reportsRevenueChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Payment Methods</h3>
+              <canvas id="paymentMethodChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="report-table">
+              <h3>Daily Breakdown</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Bookings</th>
+                    <th>Revenue</th>
+                    <th>Avg Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="day in revenueData.dailyBreakdown">
+                    <td>{{day.date | date:'MMM dd, yyyy'}}</td>
+                    <td>{{day.count}}</td>
+                    <td>₹{{day.total | number:0}}</td>
+                    <td>₹{{day.average | number:0}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- BOOKING REPORT -->
+          <div ng-show="activeReport === 'Bookings'" class="report-section">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Total Bookings</div>
+                <div class="stat-value">{{bookingData.total}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Confirmed</div>
+                <div class="stat-value confirmed">{{bookingData.confirmed}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value pending">{{bookingData.pending}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Completion Rate</div>
+                <div class="stat-value">{{bookingData.completionRate}}%</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h3>Booking Status Breakdown</h3>
+              <canvas id="bookingStatusChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Booking Trends</h3>
+              <canvas id="bookingTrendChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="report-table">
+              <h3>Recent Bookings</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Booking ID</th>
+                    <th>Customer</th>
+                    <th>Event Date</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="booking in bookingData.recent">
+                    <td>#{{booking.id}}</td>
+                    <td>{{booking.customer_name}}</td>
+                    <td>{{booking.event_date | date:'MMM dd, yyyy'}}</td>
+                    <td><span class="status-badge" ng-class="'status-' + booking.status.toLowerCase()">{{booking.status}}</span></td>
+                    <td>₹{{booking.total_price | number:0}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CUSTOMER REPORT -->
+          <div ng-show="activeReport === 'Customers'" class="report-section">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Total Customers</div>
+                <div class="stat-value">{{customerData.total}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">VIP Customers</div>
+                <div class="stat-value">{{customerData.vip}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Avg Lifetime Value</div>
+                <div class="stat-value">₹{{customerData.avgLTV | number:0}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">New This Month</div>
+                <div class="stat-value">{{customerData.newThisMonth}}</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h3>Customer Segments</h3>
+              <canvas id="customerSegmentChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Customer Growth</h3>
+              <canvas id="customerGrowthChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="report-table">
+              <h3>Top Customers</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Customer</th>
+                    <th>Segment</th>
+                    <th>Bookings</th>
+                    <th>Total Spent</th>
+                    <th>Last Booking</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="customer in customerData.top">
+                    <td>{{customer.name}}</td>
+                    <td><span class="segment-badge" ng-class="'segment-' + customer.segment.toLowerCase()">{{customer.segment}}</span></td>
+                    <td>{{customer.booking_count}}</td>
+                    <td>₹{{customer.total_spend | number:0}}</td>
+                    <td>{{customer.last_booking_date | date:'MMM dd, yyyy'}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- EQUIPMENT REPORT -->
+          <div ng-show="activeReport === 'Equipment'" class="report-section">
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-label">Total Equipment</div>
+                <div class="stat-value">{{equipmentData.total}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Avg Utilization</div>
+                <div class="stat-value">{{equipmentData.avgUtilization}}%</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Out of Stock</div>
+                <div class="stat-value alert">{{equipmentData.outOfStock}}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Revenue Contribution</div>
+                <div class="stat-value">₹{{equipmentData.totalRevenue | number:0}}</div>
+              </div>
+            </div>
+
+            <div class="chart-container">
+              <h3>Most Rented Equipment</h3>
+              <canvas id="equipmentPopularityChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="chart-container">
+              <h3>Equipment Revenue</h3>
+              <canvas id="equipmentRevenueChart" class="chart" width="400" height="100"></canvas>
+            </div>
+
+            <div class="report-table">
+              <h3>Equipment Performance</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Equipment</th>
+                    <th>Category</th>
+                    <th>Times Rented</th>
+                    <th>Utilization %</th>
+                    <th>Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="item in equipmentData.performance">
+                    <td>{{item.name}}</td>
+                    <td>{{item.category}}</td>
+                    <td>{{item.rental_count}}</td>
+                    <td><span class="util-bar">
+                      <span class="util-fill" ng-style="{'width': item.utilization + '%'}"></span>
+                      {{item.utilization}}%
+                    </span></td>
+                    <td>₹{{item.revenue | number:0}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+</div>

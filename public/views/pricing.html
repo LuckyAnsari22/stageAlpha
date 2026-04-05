@@ -1,114 +1,136 @@
-<div class="page">
-  <div class="admin-tabs mb-5">
-    <a href="#!/admin" class="admin-tab">Dashboard</a>
-    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
-    <a href="#!/admin/pricing" class="admin-tab active">Pricing</a>
-    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
-    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
-    <a href="#!/admin/staff" class="admin-tab">Staff</a>
-    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
-  </div>
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span>Stage</span><span class="brand-alt">Alpha</span>
+      </div>
+    </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">Logout</button>
+    </div>
+  </aside>
 
-  <div class="page-header sa-page-header">
-    <div>
-      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ YIELD MANAGEMENT</span>
-      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Pricing Engine</h1>
-      <p class="page-sub">Lerner Index dynamic pricing with demand elasticity estimation</p>
-    </div>
-    <button class="btn btn-primary btn-sm" ng-click="recalculateAll()" ng-disabled="recalculating">
-      {{recalculating ? 'Recalculating...' : 'Recalculate All Prices'}}
-    </button>
-  </div>
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">☰</button>
+      <h1 class="page-title">Pricing Engine</h1>
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser ? currentUser.name.charAt(0).toUpperCase() : 'A'}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser ? currentUser.name : 'Admin'}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
+      </div>
+    </header>
 
-  <!-- Pricing Pipeline Visualization -->
-  <div class="pricing-pipeline reveal">
-    <div class="pipe-node">
-      <div class="pipe-label">Base Price</div>
-      <div class="pipe-val">₹{{selectedEq.base_price || '—'}}</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-node">
-      <div class="pipe-label">Marginal Cost (40%)</div>
-      <div class="pipe-val">₹{{selectedEq.marginal_cost || '—'}}</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-node">
-      <div class="pipe-label">Elasticity (ε)</div>
-      <div class="pipe-val">{{selectedEq.elasticity || '—'}}</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-node">
-      <div class="pipe-label">Lerner Price</div>
-      <div class="pipe-val">₹{{selectedEq.lerner_price || '—'}}</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-node">
-      <div class="pipe-label">Season ×</div>
-      <div class="pipe-val">{{selectedEq.seasonal_mult || '—'}}</div>
-    </div>
-    <div class="pipe-arrow">→</div>
-    <div class="pipe-node">
-      <div class="pipe-label">Final Price</div>
-      <div class="pipe-val" style="color:var(--success); font-size:1.3rem;">₹{{selectedEq.optimal_price || '—'}}</div>
-    </div>
-  </div>
+    <main class="admin-content">
+      <div ng-controller="PricingCtrl">
 
-  <!-- Equipment Selector -->
-  <div class="form-group mt-4">
-    <label class="form-label">Select Equipment to Analyze</label>
-    <select class="input" ng-model="selectedEqId" ng-change="loadPricingData()">
-      <option value="">Choose equipment...</option>
-      <option ng-repeat="eq in equipment" value="{{eq.id}}">{{eq.name}} (₹{{eq.current_price}})</option>
-    </select>
-  </div>
+        <div class="page-header sa-page-header">
+          <div>
+            <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ YIELD MANAGEMENT</span>
+            <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Pricing Engine</h1>
+            <p class="page-sub">Lerner Index dynamic pricing with demand elasticity estimation</p>
+          </div>
+          <button class="btn btn-primary btn-sm" ng-click="recalculateAll()" ng-disabled="recalculating">
+            {{recalculating ? 'Recalculating...' : 'Recalculate All Prices'}}
+          </button>
+        </div>
 
-  <!-- Elasticity Table -->
-  <div class="data-table-wrap mt-5">
-    <div class="data-table-head">
-      <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Elasticity Estimates</span>
-      <span class="label">OLS Regression · PostgreSQL REGR_SLOPE</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Equipment</th>
-          <th>Category</th>
-          <th>Elasticity (ε)</th>
-          <th>R²</th>
-          <th>Confidence</th>
-          <th>Sample Size</th>
-          <th>Optimal Price</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="item in pricingData track by item.equipment_id" ng-click="selectEquipment(item)" style="cursor:pointer;">
-          <td class="text-1" style="font-weight:500;">{{item.name}}</td>
-          <td><span class="badge badge-muted">{{item.category}}</span></td>
-          <td class="font-mono text-accent">{{item.elasticity_coeff | number:4}}</td>
-          <td class="font-mono">{{item.r_squared | number:4}}</td>
-          <td>
-            <span class="badge" ng-class="{'badge-success': item.confidence_level === 'HIGH', 'badge-warning': item.confidence_level === 'MEDIUM', 'badge-danger': item.confidence_level === 'LOW'}">
-              {{item.confidence_level || 'N/A'}}
-            </span>
-          </td>
-          <td class="font-mono">{{item.sample_size || 0}}</td>
-          <td class="font-mono text-success">₹{{item.optimal_price | number:0}}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+        <!-- Pricing Pipeline Visualization -->
+        <div class="pricing-pipeline reveal">
+          <div class="pipe-node">
+            <div class="pipe-label">Base Price</div>
+            <div class="pipe-val">₹{{selectedEq.base_price || '—'}}</div>
+          </div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-node">
+            <div class="pipe-label">Marginal Cost (40%)</div>
+            <div class="pipe-val">₹{{selectedEq.marginal_cost || '—'}}</div>
+          </div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-node">
+            <div class="pipe-label">Elasticity (ε)</div>
+            <div class="pipe-val">{{selectedEq.elasticity || '—'}}</div>
+          </div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-node">
+            <div class="pipe-label">Lerner Price</div>
+            <div class="pipe-val">₹{{selectedEq.lerner_price || '—'}}</div>
+          </div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-node">
+            <div class="pipe-label">Season ×</div>
+            <div class="pipe-val">{{selectedEq.seasonal_mult || '—'}}</div>
+          </div>
+          <div class="pipe-arrow">→</div>
+          <div class="pipe-node">
+            <div class="pipe-label">Final Price</div>
+            <div class="pipe-val" style="color:var(--admin-success); font-size:1.3rem;">₹{{selectedEq.optimal_price || '—'}}</div>
+          </div>
+        </div>
 
-  <!-- Formula Explanation -->
-  <div class="card mt-5 reveal">
-    <h4 class="mb-3" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.8rem;">📐 Lerner Index Pricing Formula</h4>
-    <div class="font-mono" style="font-size:1.1rem; color:var(--accent); margin-bottom:1rem; padding:1rem; background:var(--bg-card); border-radius:var(--r-sm);">
-      P* = MC × ( |ε| / (|ε| - 1) ) × Season_Multiplier
-    </div>
-    <p class="text-2" style="font-size:0.85rem; line-height:1.8;">
-      Where <strong>P*</strong> = optimal price, <strong>MC</strong> = marginal cost (40% of base price),
-      <strong>ε</strong> = price elasticity of demand (estimated via OLS regression on historical booking data),
-      and <strong>Season_Multiplier</strong> = 1.25 for peak (Nov-Feb), 1.0 for regular, 0.85 for off-season (Jun-Sep).
-      The elasticity is computed using PostgreSQL's built-in <code>REGR_SLOPE</code> aggregate function.
-    </p>
+        <!-- Equipment Selector -->
+        <div class="form-group mt-4">
+          <label class="form-label">Select Equipment to Analyze</label>
+          <select class="input" ng-model="selectedEqId" ng-change="loadPricingData()">
+            <option value="">Choose equipment...</option>
+            <option ng-repeat="eq in equipment" value="{{eq.id}}">{{eq.name}} (₹{{eq.current_price}})</option>
+          </select>
+        </div>
+
+        <!-- Elasticity Table -->
+        <div class="data-table-wrap mt-5">
+          <div class="data-table-head">
+            <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Equipment Roster</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Equipment ID</th>
+                <th>Name</th>
+                <th>Current/Optimal Price</th>
+                <th>Base Price</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="item in pricingData track by item.equipment_id" ng-click="selectEquipment(item)" style="cursor:pointer;">
+                <td class="font-mono text-3">SYS-{{item.equipment_id}}</td>
+                <td class="text-1" style="font-weight:500;">{{item.name}}</td>
+                <td class="font-mono text-success">₹{{item.current_price | number:0}}</td>
+                <td class="font-mono text-2">₹{{item.base_price | number:0}}</td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" ng-click="selectEquipment(item); $event.stopPropagation()">Analyze</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Formula Explanation -->
+        <div class="card mt-5 reveal">
+          <h4 class="mb-3" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.8rem;">📐 Lerner Index Pricing Formula</h4>
+          <div class="font-mono" style="font-size:1.1rem; color:var(--admin-accent); margin-bottom:1rem; padding:1rem; background:rgba(0,0,0,0.2); border-radius:8px;">
+            P* = MC × ( |ε| / (|ε| - 1) ) × Season_Multiplier
+          </div>
+          <p class="text-2" style="font-size:0.85rem; line-height:1.8; color:var(--admin-text-muted);">
+            Where <strong>P*</strong> = optimal price, <strong>MC</strong> = marginal cost (40% of base price),
+            <strong>ε</strong> = price elasticity of demand (estimated via OLS regression on historical booking data),
+            and <strong>Season_Multiplier</strong> = 1.25 for peak (Nov-Feb), 1.0 for regular, 0.85 for off-season (Jun-Sep).
+            The elasticity is computed using PostgreSQL's built-in <code>REGR_SLOPE</code> aggregate function.
+          </p>
+        </div>
+
+      </div>
+    </main>
   </div>
 </div>

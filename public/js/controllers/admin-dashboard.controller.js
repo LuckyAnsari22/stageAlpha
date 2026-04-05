@@ -48,54 +48,59 @@ function($scope, $http, $timeout, ToastService) {
     loadDashboard();
   };
 
-  // Chart configuration
-  $timeout(function() {
-    // Revenue chart
-    var revenueCtx = document.getElementById('revenueChart');
-    if (revenueCtx && typeof Chart !== 'undefined') {
-      // Destroy old chart if it exists
-      if (revenueChart) {
-        revenueChart.destroy();
-      }
-      
-      revenueChart = new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-          labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-          datasets: [{
-            label: 'Revenue (₹)',
-            data: [12000, 19000, 15000, 25000, 22000, 30000, 28000],
-            borderColor: '#00f0ff',
-            backgroundColor: 'rgba(0, 240, 255, 0.1)',
-            borderWidth: 2,
-            tension: 0.4,
-            fill: true,
-            pointBackgroundColor: '#6c63ff',
-            pointBorderColor: '#fff',
-            pointBorderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: true, labels: { color: '#ccc' } }
+  // Chart configuration with REAL data
+  $http.get('/api/v1/analytics/monthly-revenue?months=7').then(function(res) {
+    var chartData = res.data.data || [];
+    if (chartData.length === 0) return;
+    
+    $timeout(function() {
+      var revenueCtx = document.getElementById('revenueChart');
+      if (revenueCtx && typeof Chart !== 'undefined') {
+        if (revenueChart) {
+          revenueChart.destroy();
+        }
+        
+        revenueChart = new Chart(revenueCtx, {
+          type: 'line',
+          data: {
+            labels: chartData.map(function(d) { return new Date(d.report_month).toLocaleDateString('en-IN', { month: 'short' }); }),
+            datasets: [{
+              label: 'Revenue (₹)',
+              data: chartData.map(function(d) { return parseFloat(d.gross_revenue || 0); }),
+              borderColor: '#00f0ff',
+              backgroundColor: 'rgba(0, 240, 255, 0.1)',
+              borderWidth: 2,
+              tension: 0.4,
+              fill: true,
+              pointBackgroundColor: '#6c63ff',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2
+            }]
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: '#aaa' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: true, labels: { color: '#ccc' } }
             },
-            x: {
-              ticks: { color: '#aaa' },
-              grid: { display: false }
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { color: '#aaa', callback: function(v) { return '₹' + (v/1000).toFixed(0) + 'k'; } },
+                grid: { color: 'rgba(255,255,255,0.05)' }
+              },
+              x: {
+                ticks: { color: '#aaa' },
+                grid: { display: false }
+              }
             }
           }
-        }
-      });
-    }
-  }, 500);
+        });
+      }
+    }, 100);
+  }).catch(function(err) {
+    console.error('Failed to load revenue data for chart', err);
+  });
 
   // Cleanup on destroy
   $scope.$on('$destroy', function() {
@@ -103,5 +108,23 @@ function($scope, $http, $timeout, ToastService) {
       revenueChart.destroy();
     }
   });
+
+  // Confirm booking from dashboard quick-action
+  $scope.confirmBooking = function(booking) {
+    var bookingId = booking.booking_id || booking.id;
+    if (!bookingId) {
+      ToastService.show('Error: Booking ID not found', 'error');
+      return;
+    }
+    $http.patch('/api/v1/bookings/' + bookingId + '/status', { status: 'confirmed' })
+      .then(function() {
+        booking.status = 'confirmed';
+        ToastService.show('Booking confirmed!', 'success');
+        loadDashboard();
+      })
+      .catch(function(err) {
+        ToastService.show('Error: ' + (err.data && err.data.message || 'Failed to confirm'), 'error');
+      });
+  };
 
 }]);

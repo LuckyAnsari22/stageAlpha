@@ -13,7 +13,7 @@
         </svg>
         <span>Stage</span><span class="brand-alt">Alpha</span>
       </div>
-      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="!sidebarOpen">
+      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="sidebarOpen">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -27,9 +27,7 @@
               ng-repeat="item in menuItems" 
               ng-click="navigate(item.url)"
               ng-class="{'active': item.active}">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="menu-icon">
-          <use href="#icon-{{item.icon}}"></use>
-        </svg>
+        <span class="menu-icon-emoji">{{item.icon}}</span>
         <span class="menu-label">{{item.title}}</span>
       </button>
     </nav>
@@ -86,7 +84,7 @@
     <main class="admin-content">
 
 <!-- ADMIN INVENTORY MANAGEMENT -->
-<div ng-controller="AdminInventoryCtrl" class="admin-inventory">
+<div class="admin-inventory" ng-controller="AdminInventoryCtrl">
   
   <!-- HEADER WITH ACTIONS -->
   <div class="inventory-header">
@@ -117,49 +115,48 @@
   </div>
 
   <!-- INVENTORY GRID -->
-  <div ng-hide="isLoading" class="inventory-grid">
-    <div ng-if="equipment.length > 0">
-      <div ng-repeat="item in equipment" class="equipment-card" ng-class="{'low-stock': isLowStock(item)}">
-        <div class="card-header">
-          <h3>{{item.name}}</h3>
-          <span class="category-tag">{{item.category}}</span>
-        </div>
+  <div ng-hide="isLoading" class="inventory-grid" ng-if="equipment.length > 0">
+    <div ng-repeat="item in equipment" class="equipment-card" ng-class="{'low-stock': isLowStock(item)}">
+      <div class="card-header">
+        <h3>{{item.name}}</h3>
+        <span class="category-tag">{{item.category}}</span>
+      </div>
 
-        <div class="card-body">
-          <p class="description">{{item.description}}</p>
+      <div class="card-body">
+        <p class="description">{{item.description}}</p>
 
-          <!-- Stock Info -->
-          <div class="stock-info">
-            <div class="stock-level">
-              <span class="label">Stock:</span>
-              <span class="value" ng-style="{'color': getStockColor(item)}">{{item.quantity}} units</span>
-            </div>
-            <div class="stock-bar">
-              <div class="bar-fill" ng-style="{'width': (item.quantity / 20 * 100) + '%', 'background': getStockColor(item)}"></div>
-            </div>
-            <div ng-if="isLowStock(item)" class="low-stock-alert">
-              ⚠ Low Stock - Consider restocking
-            </div>
+        <!-- Stock Info -->
+        <div class="stock-info">
+          <div class="stock-level">
+            <span class="label">Stock:</span>
+            <span class="value" ng-style="{'color': getStockColor(item)}">{{item.quantity}} units</span>
           </div>
-
-          <!-- Pricing -->
-          <div class="pricing">
-            <span class="price">₹{{item.price_per_day | number:0}}/day</span>
+          <div class="stock-bar">
+            <div class="bar-fill" ng-style="{'width': (item.quantity / 20 * 100) + '%', 'background': getStockColor(item)}"></div>
+          </div>
+          <div ng-if="isLowStock(item)" class="low-stock-alert">
+            ⚠ Low Stock - Consider restocking
           </div>
         </div>
 
-        <div class="card-actions">
-          <button class="btn-small view" ng-click="viewItem(item)" title="View">👁</button>
-          <button class="btn-small edit" ng-click="editItem(item); showModal = true" title="Edit">✎</button>
-          <button class="btn-small delete" ng-click="deleteItem(item)" title="Delete">🗑</button>
+        <!-- Pricing -->
+        <div class="pricing">
+          <span class="price">₹{{item.price_per_day | number:0}}/day</span>
         </div>
       </div>
-    </div>
 
-    <div ng-if="equipment.length === 0" class="empty-state">
-      <p>No equipment in inventory</p>
-      <button class="btn btn-primary" ng-click="openAddModal()">Add Equipment</button>
+      <div class="card-actions">
+        <button class="btn-small view" ng-click="viewItem(item)" title="View">👁</button>
+        <button class="btn-small edit" ng-click="editItem(item)" title="Edit">✎</button>
+        <button class="btn-small delete" ng-click="deleteItem(item)" title="Delete">🗑</button>
+      </div>
     </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div ng-hide="isLoading" ng-if="equipment.length === 0" class="empty-state">
+    <p>No equipment in inventory</p>
+    <button class="btn btn-primary" ng-click="openAddModal()">Add Equipment</button>
   </div>
 
   <!-- ADD/EDIT MODAL -->
@@ -247,14 +244,8 @@
         <button class="btn btn-secondary" ng-click="closeModal()">
           {{isEditing ? 'Cancel' : 'Close'}}
         </button>
-      </div>
+      
     </div>
-  </div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
+  </main>
 </div>
 </div>

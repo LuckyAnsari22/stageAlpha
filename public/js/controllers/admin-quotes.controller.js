@@ -20,20 +20,27 @@ function($scope, $http, ToastService) {
   });
 
   $scope.sendQuote = function(q) {
-    $http.patch('/api/v1/quotes/' + q.id, { status: 'sent' }).then(function() {
+    $http.patch('/api/v1/quotes/' + q.id + '/approve', { admin_notes: 'Approved by admin' }).then(function() {
       q.status = 'sent';
       ToastService.show('Quote sent', 'success');
+    }).catch(function(err) {
+      ToastService.show('Failed to send quote: ' + ((err.data && err.data.message) || 'Unknown error'), 'error');
     });
   };
   $scope.rejectQuote = function(q) {
-    $http.patch('/api/v1/quotes/' + q.id, { status: 'rejected' }).then(function() {
+    $http.patch('/api/v1/quotes/' + q.id + '/approve', { admin_notes: 'Rejected by admin' }).then(function() {
       q.status = 'rejected';
+      ToastService.show('Quote rejected', 'info');
+    }).catch(function(err) {
+      ToastService.show('Failed to reject quote', 'error');
     });
   };
   $scope.convertToBooking = function(q) {
-    $http.post('/api/v1/quotes/' + q.id + '/convert').then(function() {
+    $http.patch('/api/v1/quotes/' + q.id + '/accept').then(function(res) {
       q.status = 'converted';
-      ToastService.show('Quote converted to booking!', 'success');
+      ToastService.show('Quote converted to booking #' + ((res.data.data && res.data.data.booking_id) || ''), 'success');
+    }).catch(function(err) {
+      ToastService.show('Failed to convert: ' + ((err.data && err.data.message) || 'Unknown error'), 'error');
     });
   };
 }]);

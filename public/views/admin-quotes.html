@@ -1,69 +1,94 @@
-<div class="page">
-  <div class="admin-tabs mb-5">
-    <a href="#!/admin" class="admin-tab">Dashboard</a>
-    <a href="#!/admin/analytics" class="admin-tab">Analytics</a>
-    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
-    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
-    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
-    <a href="#!/admin/staff" class="admin-tab">Staff</a>
-    <a href="#!/admin/quotes" class="admin-tab active">Quotes</a>
-  </div>
-
-  <div class="page-header">
-    <div>
-      <h1 class="page-title">Quote Manager</h1>
-      <p class="page-sub">Review and manage customer quote requests</p>
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span>Stage</span><span class="brand-alt">Alpha</span>
+      </div>
     </div>
-  </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">Logout</button>
+    </div>
+  </aside>
 
-  <!-- Filter Tabs -->
-  <div class="filter-tabs">
-    <button class="filter-tab" ng-class="{'active': !quoteFilter}" ng-click="quoteFilter = null">All</button>
-    <button class="filter-tab" ng-class="{'active': quoteFilter === 'pending'}" ng-click="quoteFilter = 'pending'">Pending</button>
-    <button class="filter-tab" ng-class="{'active': quoteFilter === 'sent'}" ng-click="quoteFilter = 'sent'">Sent</button>
-    <button class="filter-tab" ng-class="{'active': quoteFilter === 'accepted'}" ng-click="quoteFilter = 'accepted'">Accepted</button>
-    <button class="filter-tab" ng-class="{'active': quoteFilter === 'converted'}" ng-click="quoteFilter = 'converted'">Converted</button>
-  </div>
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">☰</button>
+      <h1 class="page-title">Quote Manager</h1>
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser.name.charAt(0).toUpperCase()}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser.name}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
+      </div>
+    </header>
 
-  <!-- Quotes Table -->
-  <div class="data-table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Customer</th>
-          <th>Event Date</th>
-          <th>Event Type</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Valid Until</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="q in filteredQuotes track by q.id">
-          <td class="font-mono text-3">#{{q.id}}</td>
-          <td class="text-1" style="font-weight:500;">{{q.customer_name}}</td>
-          <td>{{q.event_date | date:'dd MMM yyyy'}}</td>
-          <td><span class="badge badge-muted">{{q.event_type}}</span></td>
-          <td class="font-mono text-accent">₹{{q.total_price | number:0}}</td>
-          <td><span class="status-chip" ng-class="q.status">{{q.status}}</span></td>
-          <td class="text-3">{{q.valid_until | date:'dd MMM'}}</td>
-          <td>
-            <div class="flex gap-1">
-              <button class="btn btn-success btn-sm" ng-show="q.status === 'pending'" ng-click="sendQuote(q)">Send</button>
-              <button class="btn btn-primary btn-sm" ng-show="q.status === 'accepted'" ng-click="convertToBooking(q)">Convert</button>
-              <button class="btn btn-danger btn-sm" ng-show="q.status === 'pending'" ng-click="rejectQuote(q)">Reject</button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <main class="admin-content">
+      <div ng-controller="AdminQuotesCtrl">
 
-  <div class="empty-state" ng-show="filteredQuotes.length === 0">
-    <div class="empty-state-icon">📝</div>
-    <h3>No quotes found</h3>
-    <p>Customer quote requests will appear here.</p>
+        <div class="dashboard-header">
+          <h2>Quote Requests</h2>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div style="display:flex; gap:8px; margin-bottom:24px; flex-wrap:wrap;">
+          <button class="btn-small" ng-class="{'btn-confirm': !quoteFilter}" ng-click="quoteFilter = null" style="padding:8px 16px; border-radius:20px; border:1px solid var(--admin-border); background:transparent; color:var(--admin-text); cursor:pointer; font-size:13px;" ng-style="!quoteFilter && {'background':'rgba(108,99,255,0.2)','color':'var(--admin-primary)','border-color':'var(--admin-primary)'}">All</button>
+          <button class="btn-small" ng-click="quoteFilter = 'pending'" style="padding:8px 16px; border-radius:20px; border:1px solid var(--admin-border); background:transparent; color:var(--admin-text); cursor:pointer; font-size:13px;" ng-style="quoteFilter === 'pending' && {'background':'rgba(255,165,0,0.2)','color':'var(--admin-warning)','border-color':'var(--admin-warning)'}">Pending</button>
+          <button class="btn-small" ng-click="quoteFilter = 'sent'" style="padding:8px 16px; border-radius:20px; border:1px solid var(--admin-border); background:transparent; color:var(--admin-text); cursor:pointer; font-size:13px;" ng-style="quoteFilter === 'sent' && {'background':'rgba(108,99,255,0.2)','color':'var(--admin-primary)','border-color':'var(--admin-primary)'}">Sent</button>
+          <button class="btn-small" ng-click="quoteFilter = 'accepted'" style="padding:8px 16px; border-radius:20px; border:1px solid var(--admin-border); background:transparent; color:var(--admin-text); cursor:pointer; font-size:13px;" ng-style="quoteFilter === 'accepted' && {'background':'rgba(0,255,0,0.2)','color':'var(--admin-success)','border-color':'var(--admin-success)'}">Accepted</button>
+        </div>
+
+        <!-- Quotes Table -->
+        <div style="background:var(--admin-card-bg); border:1px solid var(--admin-border); border-radius:12px; overflow:hidden;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Event Date</th>
+                <th>Type</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Valid Until</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="q in filteredQuotes track by q.id">
+                <td class="booking-id">#{{q.id}}</td>
+                <td style="font-weight:500; color:var(--admin-text);">{{q.customer_name}}</td>
+                <td>{{q.event_date | date:'dd MMM yyyy'}}</td>
+                <td><span class="badge status-confirmed">{{q.event_type}}</span></td>
+                <td class="amount">₹{{q.total_price | number:0}}</td>
+                <td><span class="badge" ng-class="'status-' + q.status">{{q.status}}</span></td>
+                <td style="color:var(--admin-text-muted);">{{q.valid_until | date:'dd MMM'}}</td>
+                <td>
+                  <div style="display:flex; gap:4px;">
+                    <button class="btn-small" ng-show="q.status === 'pending'" ng-click="sendQuote(q)" style="background:rgba(0,255,0,0.2); color:var(--admin-success); border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:11px;">Send</button>
+                    <button class="btn-small" ng-show="q.status === 'accepted'" ng-click="convertToBooking(q)" style="background:rgba(108,99,255,0.2); color:var(--admin-primary); border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:11px;">Convert</button>
+                    <button class="btn-small" ng-show="q.status === 'pending'" ng-click="rejectQuote(q)" style="background:rgba(255,51,51,0.2); color:var(--admin-danger); border:none; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:11px;">Reject</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="empty-state" ng-show="filteredQuotes.length === 0">
+          <p style="font-size:2rem; margin-bottom:8px;">📝</p>
+          <h3 style="color:var(--admin-text); margin-bottom:8px;">No quotes found</h3>
+          <p>Customer quote requests will appear here.</p>
+        </div>
+
+      </div>
+    </main>
   </div>
 </div>

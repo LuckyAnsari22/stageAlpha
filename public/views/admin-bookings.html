@@ -13,7 +13,7 @@
         </svg>
         <span>Stage</span><span class="brand-alt">Alpha</span>
       </div>
-      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="!sidebarOpen">
+      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="sidebarOpen">
         <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -27,9 +27,7 @@
               ng-repeat="item in menuItems" 
               ng-click="navigate(item.url)"
               ng-class="{'active': item.active}">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="menu-icon">
-          <use href="#icon-{{item.icon}}"></use>
-        </svg>
+        <span class="menu-icon-emoji">{{item.icon}}</span>
         <span class="menu-label">{{item.title}}</span>
       </button>
     </nav>
@@ -272,15 +270,8 @@
           <button class="btn btn-secondary" ng-click="closeModal()">
             Close
           </button>
-        </div>
-      </div>
+        
     </div>
-  </div>
-      </div>
-    </div>
-  </div>
-
-</div>
-
+  </main>
 </div>
 </div>

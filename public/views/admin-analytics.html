@@ -1,144 +1,172 @@
-<div class="page">
-  <!-- Admin Nav -->
-  <div class="admin-tabs mb-5">
-    <a href="#!/admin" class="admin-tab">Dashboard</a>
-    <a href="#!/admin/analytics" class="admin-tab active">Analytics</a>
-    <a href="#!/admin/pricing" class="admin-tab">Pricing</a>
-    <a href="#!/admin/backtest" class="admin-tab">Backtest</a>
-    <a href="#!/admin/calendar" class="admin-tab">Calendar</a>
-    <a href="#!/admin/staff" class="admin-tab">Staff</a>
-    <a href="#!/admin/quotes" class="admin-tab">Quotes</a>
-  </div>
-
-  <div class="page-header sa-page-header">
-    <div>
-      <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ INSIGHTS</span>
-      <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Analytics</h1>
-      <p class="page-sub">Revenue trends, category performance, and booking insights</p>
-    </div>
-    <div class="flex gap-2">
-      <select class="input" style="width:auto;" ng-model="selectedPeriod" ng-change="refreshData()">
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
-        <option value="90">Last 90 days</option>
-        <option value="365">Last year</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- KPI Row -->
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-label">Total Revenue</div>
-      <div class="kpi-value gradient-text">₹{{analytics.total_revenue | number:0}}</div>
-      <div class="kpi-sub">All completed bookings</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Total Bookings</div>
-      <div class="kpi-value text-brand">{{analytics.total_bookings || 0}}</div>
-      <div class="kpi-sub">{{analytics.completion_rate || 0}}% completion rate</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Avg Order Value</div>
-      <div class="kpi-value text-accent">₹{{analytics.avg_order_value | number:0}}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Algorithm Uplift</div>
-      <div class="kpi-value text-success">+{{analytics.algorithm_uplift || 0}}%</div>
-      <div class="kpi-sub">vs base pricing</div>
-    </div>
-  </div>
-
-  <!-- Charts Row -->
-  <div class="grid grid-cols-2" style="gap:1.5rem;">
-    <!-- Revenue Chart -->
-    <div class="chart-card">
-      <div class="chart-head">
-        <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Revenue Over Time</span>
-      </div>
-      <div class="chart-body">
-        <canvas id="revenueTimeChart"></canvas>
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span>Stage</span><span class="brand-alt">Alpha</span>
       </div>
     </div>
-
-    <!-- Category Breakdown -->
-    <div class="chart-card">
-      <div class="chart-head">
-        <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Revenue by Category</span>
-      </div>
-      <div class="chart-body">
-        <canvas id="categoryChart"></canvas>
-      </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">Logout</button>
     </div>
-  </div>
+  </aside>
 
-  <!-- Booking Distribution + Top Equipment -->
-  <div class="grid grid-cols-2 mt-5" style="gap:1.5rem;">
-    <!-- Event Type Distribution -->
-    <div class="chart-card">
-      <div class="chart-head">
-        <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Bookings by Event Type</span>
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">☰</button>
+      <h1 class="page-title">Analytics</h1>
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser ? currentUser.name.charAt(0).toUpperCase() : 'A'}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser ? currentUser.name : 'Admin'}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
       </div>
-      <div class="chart-body">
-        <canvas id="eventTypeChart"></canvas>
-      </div>
-    </div>
+    </header>
 
-    <!-- Top Equipment -->
-    <div class="data-table-wrap">
-      <div class="data-table-head">
-        <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Top Equipment by Bookings</span>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Equipment</th>
-            <th>Bookings</th>
-            <th>Revenue</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr ng-repeat="eq in topEquipment track by eq.id">
-            <td class="font-mono text-3">{{$index + 1}}</td>
-            <td class="text-1" style="font-weight:500;">{{eq.name}}</td>
-            <td class="font-mono">{{eq.total_bookings}}</td>
-            <td class="font-mono text-accent">₹{{eq.total_revenue | number:0}}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
+    <main class="admin-content">
+      <div ng-controller="AnalyticsCtrl">
 
-  <!-- Monthly Revenue Table -->
-  <div class="data-table-wrap mt-5">
-    <div class="data-table-head">
-      <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Monthly Revenue Breakdown</span>
-      <span class="label">Data from materialized view</span>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Month</th>
-          <th>Bookings</th>
-          <th>Revenue</th>
-          <th>Avg Booking Value</th>
-          <th>Trend</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="m in monthlyRevenue track by m.report_month">
-          <td class="text-1" style="font-weight:500;">{{m.report_month | date:'MMM yyyy'}}</td>
-          <td class="font-mono">{{m.total_bookings}}</td>
-          <td class="font-mono text-accent">₹{{m.gross_revenue | number:0}}</td>
-          <td class="font-mono text-2">₹{{m.avg_booking_value | number:0}}</td>
-          <td>
-            <span class="font-mono text-success" ng-show="$index > 0 && m.gross_revenue > monthlyRevenue[$index-1].gross_revenue">↗ Up</span>
-            <span class="font-mono text-danger" ng-show="$index > 0 && m.gross_revenue < monthlyRevenue[$index-1].gross_revenue">↘ Down</span>
-            <span class="font-mono text-3" ng-show="$index === 0">—</span>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+        <div class="page-header sa-page-header">
+          <div>
+            <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ INSIGHTS</span>
+            <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Analytics</h1>
+            <p class="page-sub">Revenue trends, category performance, and booking insights</p>
+          </div>
+          <div class="flex gap-2">
+            <select class="input" style="width:auto;" ng-model="selectedPeriod" ng-change="refreshData()">
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+              <option value="365">Last year</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Total Revenue</div>
+            <div class="kpi-value gradient-text">₹{{analytics.total_revenue | number:0}}</div>
+            <div class="kpi-sub">All completed bookings</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Total Bookings</div>
+            <div class="kpi-value text-brand">{{analytics.total_bookings || 0}}</div>
+            <div class="kpi-sub">{{analytics.completion_rate || 0}}% completion rate</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Avg Order Value</div>
+            <div class="kpi-value text-accent">₹{{analytics.avg_order_value | number:0}}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Algorithm Uplift</div>
+            <div class="kpi-value text-success">+{{analytics.algorithm_uplift || 0}}%</div>
+            <div class="kpi-sub">vs base pricing</div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-2" style="gap:1.5rem;">
+          <!-- Revenue Chart -->
+          <div class="chart-card">
+            <div class="chart-head">
+              <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Revenue Over Time</span>
+            </div>
+            <div class="chart-body">
+              <canvas id="revenueTimeChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Category Breakdown -->
+          <div class="chart-card">
+            <div class="chart-head">
+              <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Revenue by Category</span>
+            </div>
+            <div class="chart-body">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Booking Distribution + Top Equipment -->
+        <div class="grid grid-cols-2 mt-5" style="gap:1.5rem;">
+          <!-- Event Type Distribution -->
+          <div class="chart-card">
+            <div class="chart-head">
+              <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Bookings by Event Type</span>
+            </div>
+            <div class="chart-body">
+              <canvas id="eventTypeChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Top Equipment -->
+          <div class="data-table-wrap">
+            <div class="data-table-head">
+              <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Top Equipment by Bookings</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Equipment</th>
+                  <th>Bookings</th>
+                  <th>Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="eq in topEquipment track by eq.id">
+                  <td class="font-mono text-3">{{$index + 1}}</td>
+                  <td class="text-1" style="font-weight:500;">{{eq.name}}</td>
+                  <td class="font-mono">{{eq.total_bookings}}</td>
+                  <td class="font-mono text-accent">₹{{eq.total_revenue | number:0}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Monthly Revenue Table -->
+        <div class="data-table-wrap mt-5">
+          <div class="data-table-head">
+            <span class="heading-sm" style="font-family:'Amatic SC', var(--font-display); text-transform:uppercase; font-size:1.5rem;">Monthly Revenue Breakdown</span>
+            <span class="label">Data from materialized view</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Bookings</th>
+                <th>Revenue</th>
+                <th>Avg Booking Value</th>
+                <th>Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr ng-repeat="m in monthlyRevenue track by m.report_month">
+                <td class="text-1" style="font-weight:500;">{{m.report_month | date:'MMM yyyy'}}</td>
+                <td class="font-mono">{{m.total_bookings}}</td>
+                <td class="font-mono text-accent">₹{{m.gross_revenue | number:0}}</td>
+                <td class="font-mono text-2">₹{{m.avg_booking_value | number:0}}</td>
+                <td>
+                  <span class="font-mono text-success" ng-show="$index > 0 && m.gross_revenue > monthlyRevenue[$index-1].gross_revenue">↗ Up</span>
+                  <span class="font-mono text-danger" ng-show="$index > 0 && m.gross_revenue < monthlyRevenue[$index-1].gross_revenue">↘ Down</span>
+                  <span class="font-mono text-3" ng-show="$index === 0">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </main>
   </div>
 </div>

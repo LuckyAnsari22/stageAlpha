@@ -22,10 +22,27 @@ app.use(cors({                                       // 2. CORS
 app.use(express.json({ limit: '10kb' }))             // 3. Body parsing (limit prevents attacks)
 app.use(express.urlencoded({ extended: false }))     // 4. Form body
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now()
+  res.on('finish', () => {
+    if (req.path.startsWith('/api')) {
+      const ms = Date.now() - start
+      const color = res.statusCode >= 500 ? '\x1b[31m' : res.statusCode >= 400 ? '\x1b[33m' : '\x1b[32m'
+      console.log(`${color}${req.method}\x1b[0m ${req.path} → ${res.statusCode} (${ms}ms)`)
+    }
+  })
+  next()
+})
+
 // URL normalization middleware (uses built-in url module — required for course)
 app.use((req, res, next) => {
-  const parsed = url.parse(req.url, true)
-  req.normalizedPath = parsed.pathname.toLowerCase()
+  try {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`)
+    req.normalizedPath = parsedUrl.pathname.toLowerCase()
+  } catch {
+    req.normalizedPath = req.path.toLowerCase()
+  }
   next()
 })
 
@@ -48,10 +65,29 @@ app.use('/api/v1/packages',      require('./routes/packages'))
 app.use('/api/v1/quotes',        require('./routes/quotes'))
 app.use('/api/v1/notifications', require('./routes/notifications'))
 app.use('/api/v1/staff',         require('./routes/staff'))
-
-// Health check
-app.get('/api/v1/health', (req, res) => {
-  res.json({ success: true, data: { status: 'ok', uptime: process.uptime() } })
+app.use('/api/v1/intelligence',  require('./routes/intelligence'))
+// Health check with DB verification
+app.get('/api/v1/health', async (req, res) => {
+  try {
+    const { pool } = require('./config/db')
+    const dbResult = await pool.query('SELECT NOW() AS server_time')
+    res.json({
+      success: true,
+      data: {
+        status: 'healthy',
+        uptime: Math.round(process.uptime()),
+        memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        db: 'connected',
+        db_time: dbResult.rows[0].server_time,
+        node_version: process.version
+      }
+    })
+  } catch (err) {
+    res.status(503).json({
+      success: false,
+      data: { status: 'degraded', uptime: Math.round(process.uptime()), db: 'disconnected', error: err.message }
+    })
+  }
 })
 
 // SPA fallback — serve index.html for all non-API routes
@@ -76,7 +112,7 @@ cron.schedule('0 2 * * *', async () => {
   console.log('[CRON] Running nightly price update...')
   try {
     const { pool } = require('./config/db')
-    await pool.query('SELECT run_batch_price_update()')
+    await pool.query('CALL batch_update_prices()')
     console.log('[CRON] Price update complete')
   } catch (err) {
     console.error('[CRON] Price update failed:', err.message)

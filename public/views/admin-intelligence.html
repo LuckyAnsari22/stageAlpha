@@ -1,0 +1,188 @@
+<div class="admin-layout" ng-controller="AdminLayoutCtrl">
+  <aside class="admin-sidebar" ng-class="{'open': sidebarOpen}">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <span>Stage</span><span class="brand-alt">Alpha</span>
+      </div>
+      <button class="sidebar-close" ng-click="toggleSidebar()" ng-show="sidebarOpen">✕</button>
+    </div>
+    <nav class="sidebar-menu">
+      <button class="menu-item" ng-repeat="item in menuItems" ng-click="navigate(item.url)" ng-class="{'active': item.active}">
+        <span class="menu-icon-emoji">{{item.icon}}</span>
+        <span class="menu-label">{{item.title}}</span>
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="user-menu" ng-click="logout()" title="Logout">Logout</button>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-header">
+      <button class="toggle-sidebar" ng-click="toggleSidebar()">☰</button>
+      <h1 class="page-title">Intelligence Engine</h1>
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">{{currentUser ? currentUser.name.charAt(0).toUpperCase() : 'A'}}</div>
+          <div class="user-info">
+            <div class="user-name">{{currentUser ? currentUser.name : 'Admin'}}</div>
+            <div class="user-role">Admin</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-content">
+      <div ng-controller="AdminIntelligenceCtrl">
+        
+        <div class="page-header sa-page-header">
+          <div>
+            <span class="sa-section-tag" style="margin-bottom:0.75rem;">✦ AI ENGINE</span>
+            <h1 class="page-title" style="font-family:'Amatic SC', var(--font-display); font-size:3.5rem; text-transform:uppercase; letter-spacing:0.03em;">Revenue Intelligence Hub</h1>
+            <p class="page-sub">Actionable insights driven by RevPAR, RFM, and Capital ROI metrics.</p>
+          </div>
+        </div>
+
+        <div class="tabs mt-4">
+          <button class="tab-btn" ng-class="{'active': activeTab === 'rpaed'}" ng-click="setTab('rpaed')">RPAED Engine</button>
+          <button class="tab-btn" ng-class="{'active': activeTab === 'roi'}" ng-click="setTab('roi')">Portfolio ROI</button>
+          <button class="tab-btn" ng-class="{'active': activeTab === 'rfm'}" ng-click="setTab('rfm')">Customer RFM Map</button>
+        </div>
+
+        <!-- 1. RPAED Tab -->
+        <div ng-show="activeTab === 'rpaed'" class="mt-4">
+          <div class="card mb-4">
+            <h4 class="mb-2" style="font-family:'Amatic SC'; font-size:1.8rem; color:var(--brand-primary)">Revenue Per Available Equipment Day</h4>
+            <p class="text-3">A hospitality-industry metric applied to equipment rentals. High utilization items drive high RPAED. Target is 65-75% utilization.</p>
+          </div>
+
+          <div class="data-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Stock</th>
+                  <th>Utilization</th>
+                  <th>ADR (Daily Rate)</th>
+                  <th>RPAED</th>
+                  <th>System Recommendation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="r in rpaed">
+                  <td class="text-1">{{r.name}}</td>
+                  <td class="font-mono">{{r.stock_qty}}</td>
+                  <td class="font-mono" ng-class="{'text-success': r.utilization_pct >= 65, 'text-warning': r.utilization_pct < 40, 'text-danger': r.utilization_pct < 20}">
+                    {{r.utilization_pct}}%
+                  </td>
+                  <td class="font-mono">₹{{r.adr}}</td>
+                  <td class="font-mono text-accent">₹{{r.rpaed}}</td>
+                  <td>
+                    <span class="badge" ng-class="{
+                      'badge-success': r.recommendation === 'BUY_MORE' || r.recommendation === 'OPTIMAL',
+                      'badge-warning': r.recommendation === 'PROMOTE',
+                      'badge-danger': r.recommendation === 'CONSIDER_DISPOSAL' || r.recommendation === 'REVIEW'
+                    }">{{r.recommendation | uppercase}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. Portfolio ROI Tab -->
+        <div ng-show="activeTab === 'roi'" class="mt-4">
+          <div class="card mb-4">
+            <h4 class="mb-2" style="font-family:'Amatic SC'; font-size:1.8rem; color:var(--brand-primary)">Capital Allocation ROI</h4>
+            <p class="text-3">Every piece of equipment is a capital investment. Measure if the asset is earning its keep based on its purchase price.</p>
+          </div>
+
+          <div class="data-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Equipment</th>
+                  <th>Avg Monthly Rev</th>
+                  <th>Est. Annual ROI</th>
+                  <th>Payback Period</th>
+                  <th>Months Owned</th>
+                  <th>System Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="r in roi">
+                  <td class="text-1">{{r.name}}</td>
+                  <td class="font-mono">₹{{r.avg_monthly_revenue}}</td>
+                  <td class="font-mono text-success">{{r.annual_roi_pct}}%</td>
+                  <td class="font-mono">{{r.payback_months}} mos</td>
+                  <td class="font-mono">{{r.months_owned}} mos</td>
+                  <td>
+                    <span class="badge" ng-class="{
+                      'badge-success': r.roi_recommendation === 'STRONG_PERFORMER',
+                      'badge-warning': r.roi_recommendation === 'ADEQUATE',
+                      'badge-danger': r.roi_recommendation === 'LOSING_MONEY' || r.roi_recommendation === 'UNDERPERFORMING'
+                    }">{{r.roi_recommendation | uppercase}}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. Customer RFM Tab -->
+        <div ng-show="activeTab === 'rfm'" class="mt-4">
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-label">Champions</div>
+              <div class="kpi-value text-success">{{rfm.champions}}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">Total Segments</div>
+              <div class="kpi-value text-2">{{rfm.total}}</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-label">At Risk / Lost</div>
+              <div class="kpi-value text-danger">{{rfm.at_risk + rfm.summary.LOST}}</div>
+            </div>
+          </div>
+
+          <div class="chart-card mt-4">
+            <div class="chart-head">
+              <span class="heading-sm" style="font-family:'Amatic SC'; font-size:1.5rem; text-transform:uppercase;">Customer Value Map</span>
+              <span class="label">Bubble size = Recency</span>
+            </div>
+            <div class="chart-body" style="height: 400px; padding: 1rem;">
+              <canvas id="rfmChart"></canvas>
+            </div>
+          </div>
+
+          <div class="data-table-wrap mt-4" ng-show="rfm.customers">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Recency</th>
+                  <th>Frequency</th>
+                  <th>Monetary</th>
+                  <th>Segment</th>
+                  <th>Recommended Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="c in rfm.customers">
+                  <td class="text-1">{{c.name}} <br><small class="text-3">{{c.email}}</small></td>
+                  <td class="font-mono">{{c.recency_days}}d</td>
+                  <td class="font-mono">{{c.frequency}}x</td>
+                  <td class="font-mono text-accent">₹{{c.monetary | number:0}}</td>
+                  <td><span class="badge bg-1 text-2">{{c.segment}}</span></td>
+                  <td class="text-3"><small>{{c.recommended_action}}</small></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
