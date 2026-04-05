@@ -153,6 +153,7 @@ AS $$
 DECLARE
     eq RECORD;
     v_opt_price DECIMAL;
+    v_updated INT := 0;
 BEGIN
     FOR eq IN SELECT id, base_price, current_price FROM equipment WHERE is_active = true LOOP
         SELECT final_optimal_price INTO v_opt_price FROM calculate_optimal_price(eq.id, CURRENT_DATE);
@@ -162,7 +163,26 @@ BEGIN
             VALUES (eq.id, eq.current_price, v_opt_price, 'Nightly batch rebalance', 'BATCH');
             
             UPDATE equipment SET current_price = v_opt_price, updated_at = NOW() WHERE id = eq.id;
+            v_updated := v_updated + 1;
         END IF;
     END LOOP;
+
+    -- Refresh materialized views after price updates
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_revenue_daily;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY mv_revenue_monthly;
+    
+    RAISE NOTICE 'batch_update_prices: % equipment prices updated', v_updated;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ─────────────────────────────────────────────
+-- 5. Convenience wrapper (backward compatibility)
+-- Allows: SELECT run_batch_price_update()
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION run_batch_price_update()
+RETURNS TEXT AS $$
+BEGIN
+    CALL batch_update_prices();
+    RETURN 'complete';
 END;
 $$ LANGUAGE plpgsql;

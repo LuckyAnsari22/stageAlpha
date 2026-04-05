@@ -119,5 +119,29 @@ ORDER BY report_month DESC;
 CREATE UNIQUE INDEX idx_mv_rev_monthly_month ON mv_revenue_monthly(report_month);
 
 -- ─────────────────────────────────────────────
+-- 7. mv_equipment_performance (Materialized — Admin Top Equipment)
+-- ─────────────────────────────────────────────
+DROP MATERIALIZED VIEW IF EXISTS mv_equipment_performance CASCADE;
+CREATE MATERIALIZED VIEW mv_equipment_performance AS
+SELECT 
+    e.id AS equipment_id,
+    e.name AS equipment_name,
+    c.name AS category_name,
+    COUNT(DISTINCT b.id)::int AS total_bookings,
+    COALESCE(SUM(bi.final_price * bi.qty), 0) AS total_revenue,
+    COALESCE(AVG(bi.final_price), 0) AS avg_price,
+    RANK() OVER (ORDER BY COALESCE(SUM(bi.final_price * bi.qty), 0) DESC) AS rank_revenue,
+    RANK() OVER (ORDER BY COUNT(DISTINCT b.id) DESC) AS rank_bookings
+FROM equipment e
+JOIN categories c ON e.category_id = c.id
+LEFT JOIN booking_items bi ON e.id = bi.equipment_id
+LEFT JOIN bookings b ON bi.booking_id = b.id AND b.status IN ('completed', 'confirmed')
+WHERE e.is_active = true
+GROUP BY e.id, e.name, c.name
+ORDER BY total_revenue DESC;
+
+CREATE UNIQUE INDEX idx_mv_equip_perf_id ON mv_equipment_performance(equipment_id);
+
+-- ─────────────────────────────────────────────
 -- Note on Materialized Views:
 -- Use `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_revenue_daily;` in a cron job.
