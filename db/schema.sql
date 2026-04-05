@@ -68,6 +68,9 @@ CREATE TABLE customers (
   email         VARCHAR(150) NOT NULL UNIQUE,
   password_hash VARCHAR(72)  NOT NULL,
   phone_hash    VARCHAR(72),
+  phone         VARCHAR(20),
+  city          VARCHAR(60),
+  address       TEXT,
   role          VARCHAR(20)  NOT NULL DEFAULT 'customer'
                 CHECK (role IN ('customer', 'admin')),
   is_active     BOOLEAN DEFAULT true,

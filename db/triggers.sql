@@ -28,6 +28,12 @@ CREATE TRIGGER update_equipment_modtime BEFORE UPDATE ON equipment FOR EACH ROW 
 DROP TRIGGER IF EXISTS update_bookings_modtime ON bookings;
 CREATE TRIGGER update_bookings_modtime BEFORE UPDATE ON bookings FOR EACH ROW EXECUTE FUNCTION trg_update_modified_column();
 
+DROP TRIGGER IF EXISTS update_packages_modtime ON packages;
+CREATE TRIGGER update_packages_modtime BEFORE UPDATE ON packages FOR EACH ROW EXECUTE FUNCTION trg_update_modified_column();
+
+DROP TRIGGER IF EXISTS update_quotes_modtime ON quotes;
+CREATE TRIGGER update_quotes_modtime BEFORE UPDATE ON quotes FOR EACH ROW EXECUTE FUNCTION trg_update_modified_column();
+
 
 -- ─────────────────────────────────────────────
 -- 2. Stock Management (Auto Reserve/Release)

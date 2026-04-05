@@ -38,8 +38,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_notify_price_change ON price_audit_log;
+DROP TRIGGER IF EXISTS trg_notify_price_change ON price_history;
 CREATE TRIGGER trg_notify_price_change
-    AFTER INSERT ON price_audit_log
+    AFTER INSERT ON price_history
     FOR EACH ROW EXECUTE FUNCTION notify_price_change();
 
