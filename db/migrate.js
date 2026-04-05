@@ -5,7 +5,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') })
 
 // Use direct fallback config if DATABASE_URL isn't fully loaded due to path issues
 const connectionString = process.env.DATABASE_URL || 'postgresql://postgres@localhost:5432/stagealpha'
-const pool = new Pool({ connectionString })
+const pool = new Pool({ connectionString, ssl: { rejectUnauthorized: false } })
 
 async function runSQL(filename) {
   const sql = fs.readFileSync(path.join(__dirname, filename), 'utf8')
